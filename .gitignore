@@ -1,5 +1,6 @@
-# Ignore everything except .py and .md .html files
+# Ignore everything except .py, .md, and .html files (including those in directories)
 *
+!*/
 !.gitignore
 !*.py
 !*.md

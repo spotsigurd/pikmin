@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPS Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Microsoft JhengHei',Arial}
+body{background:#FFF0F5;color:#5D4037}
+#loading-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#FFD1DC 0%,#FFF0F5 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s}
+#loading-screen.hidden{opacity:0;pointer-events:none}
+.loader{width:60px;height:60px;border:5px solid rgba(93,64,55,.1);border-top-color:#FF6B81;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-text{color:#5D4037;font-size:18px;margin-top:20px;font-weight:700}
+@keyframes blink-anim{0%,100%{opacity:1}50%{opacity:0.3}}
+.blink-marker{animation:blink-anim 1.5s infinite}
+@keyframes flow-line{to{stroke-dashoffset:-20}}
+.flowing-line{animation:flow-line 1s linear infinite}
+@keyframes radar-scan{0%{transform:scale(0.5);opacity:1}100%{transform:scale(4);opacity:0}}
+.radar-core{position:absolute;top:50%;left:50%;width:14px;height:14px;margin:-7px 0 0 -7px;background:#FF6B81;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px #FF6B81;z-index:2}
+.radar-ring{position:absolute;top:50%;left:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:1px solid #FF6B81;background:rgba(255,107,129,.3);animation:radar-scan 2s ease-out infinite;z-index:1}
+.radar-ring.delay{animation-delay:1s}
+.current-location-marker{transition:transform .5s linear !important}
+#loading-progress{color:rgba(93,64,55,.7);font-size:14px;margin-top:10px}
+#map{width:100%;height:auto;background:#FFF0F5;position:absolute;top:170px;bottom:0;left:0;right:0;z-index:1;opacity:0;transition:top 0.4s ease, opacity .5s}
+#map.ready{opacity:1}
+#map.expanded{top:0}
+#toolbar{position:fixed;top:0;left:0;right:0;z-index:5000;height:170px;background:linear-gradient(135deg,#FFD1DC 0%,#FFF0F5 100%);padding:12px 15px;box-shadow:0 4px 6px rgba(0,0,0,.1);opacity:0;transition:top 0.4s ease, opacity .5s;pointer-events:auto}
+#toolbar.ready{opacity:1;display:block}
+#toolbar.collapsed{top:-170px}
+#title{font-size:18px;font-weight:700;color:#5D4037;margin-bottom:6px}
+#search-container{margin-bottom:6px;display:flex;gap:10px}
+#search-box{flex:1;max-width:500px;padding:10px 15px;font-size:14px;border:2px solid #FFB6C1;border-radius:25px;background:#FFFFFF;color:#5D4037;outline:0}
+#search-btn,button{background:#FFFFFF;border:2px solid #FFB6C1;color:#5D4037;padding:10px 20px;border-radius:25px;cursor:pointer;font-size:14px;font-weight:700;transition:background .2s}
+#search-btn:hover,button:hover{background:#FFD1DC}
+button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border:1px solid #FFB6C1}
+#mode-label{background:#FFFFFF;border:1px solid #FFD1DC;border-radius:6px;padding:8px 15px;font-size:13px;font-weight:700;color:#5D4037;display:inline-block;margin-right:10px}
+#coords{font-size:11px;color:#5D4037;display:block;margin-top:4px;background:rgba(255,255,255,.7);padding:4px 10px;border-radius:4px;border:1px solid #FFD1DC}
+#status{position:fixed;top:15px;right:65px;background:rgba(255,255,255,.9);color:#FF6B81;padding:8px 15px;border-radius:6px;font-size:12px;font-weight:700;z-index:5001;border:1px solid #FFD1DC;box-shadow:0 2px 5px rgba(0,0,0,.1)}
+#toggle-toolbar-btn{position:fixed;top:15px;right:15px;z-index:5002;background:#FFFFFF;border:2px solid #FFB6C1;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#5D4037;box-shadow:0 2px 5px rgba(0,0,0,.1);transition:background .2s, transform 0.4s ease;padding:0}
+#toggle-toolbar-btn:hover{background:#FFD1DC}
+#toggle-toolbar-btn.collapsed{transform:rotate(180deg)}
+.search-results{position:fixed;top:180px;left:60px;max-width:500px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-height:350px;overflow-y:auto;z-index:5001;display:none}
+.info-panel{position:fixed;bottom:30px;left:15px;background:rgba(255,255,255,.92);color:#5D4037;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:bold;z-index:5001;border:2px solid #FFB6C1;box-shadow:0 4px 6px rgba(0,0,0,.1);display:none;flex-direction:column;gap:3px;pointer-events:auto;cursor:grab;user-select:none;max-width:200px}
+.info-panel:active{cursor:grabbing}
+.info-panel.show{display:flex}
+.info-panel.paused{border-color:#FF8C00; color:#D35400; background:rgba(255,245,230,.95)}
+.info-panel.paused #info-eta{animation:blink-anim 1.5s infinite}
+.leaflet-control-container{z-index:100}
+.search-results.show{display:block}
+.search-result-item{padding:12px 15px;cursor:pointer;border-bottom:1px solid #eee;color:#333;transition:background .2s}
+.search-result-item:hover{background:#FFF0F5}
+.result-name{font-weight:700;color:#FF6B81;margin-bottom:4px;font-size:14px}
+.result-address{font-size:12px;color:#666;line-height:1.4}
+.result-type{font-size:11px;color:#999;margin-top:4px;font-style:italic}
+.bm-row{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
+.ctrl-row{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
+.bm-select{flex:1;padding:6px 10px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0;max-width:280px}
+.bm-label{font-size:11px;font-weight:700;color:#5D4037;white-space:nowrap}
+.coord-input-row{display:flex;gap:6px;margin-top:4px;align-items:center}
+.coord-input{width:100px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
+.coord-input:focus{border-color:#FF6B81}
+#input-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:6000;animation:fadeIn .25s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideDown{from{transform:translateY(-40px);opacity:0}to{transform:translateY(0);opacity:1}}
+#input-modal-box{background:linear-gradient(135deg,#FFF0F5 0%,#FFFFFF 100%);border:2px solid #FFB6C1;border-radius:16px;padding:24px 28px;min-width:340px;max-width:420px;box-shadow:0 12px 40px rgba(255,107,129,.25),0 4px 16px rgba(0,0,0,.15);animation:slideDown .3s ease-out}
+#input-modal-title{font-size:17px;font-weight:700;color:#5D4037;margin-bottom:16px;text-align:center}
+#input-modal-input{width:100%;padding:12px 15px;font-size:14px;border:2px solid #FFD1DC;border-radius:12px;background:#FFFFFF;color:#5D4037;outline:0;box-sizing:border-box;transition:border-color .2s}
+#input-modal-input:focus{border-color:#FF6B81}
+#input-modal-buttons{display:flex;gap:12px;margin-top:18px;justify-content:center}
+#input-modal-cancel,#input-modal-confirm{padding:10px 28px;border-radius:25px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:none}
+#input-modal-cancel{background:#F5F5F5;color:#888;border:1px solid #DDD}
+#input-modal-cancel:hover{background:#E8E8E8;color:#666}
+#input-modal-confirm{background:linear-gradient(135deg,#FF6B81,#FF8E9E);color:#FFF;box-shadow:0 4px 12px rgba(255,107,129,.4)}
+#input-modal-confirm:hover{background:linear-gradient(135deg,#FF8E9E,#FF6B81);box-shadow:0 6px 16px rgba(255,107,129,.5);transform:translateY(-1px)}
+</style>
+</head>
+<body>
+<div id="loading-screen">
+<div class="loader"></div>
+<div id="loading-text">載入地圖中...</div>
+<div id="loading-progress">初始化</div>
+</div>
+<div id="status">就緒</div>
+<button id="toggle-toolbar-btn" onclick="toggleToolbar()" style="display:none;">⬇️</button>
+<div id="info-panel" class="info-panel">
+<div id="info-dist">📏 距離: --</div>
+<div id="info-eta">⏳ 預估: --</div>
+</div>
+<div id="toolbar">
+<div id="title">🗺️ GPS 模擬地圖 - 全球搜尋</div>
+<div id="search-container">
+<input type="text" id="search-box" placeholder="🔍 搜尋全球地點 (例:富士山、東京鐵塔、台北101)"/>
+<button id="search-btn" onclick="searchLocation()">搜尋</button>
+</div>
+<div class="ctrl-row">
+	<span id="mode-label">🖱️ 左鍵=新增 | 右鍵虛線=插入點 | 右鍵節點=選項 | 雙擊=鎖定</span>
+	<button id="toolbar-start-btn" onclick="startSimulation()" style="background:#77DD77;border-color:#2E8B57;font-weight:bold;">🚀 開始模擬</button>
+	<button id="toolbar-pause-btn" onclick="togglePause()" style="opacity:0.5;pointer-events:none;background:#FFB347;border-color:#FF8C00;">⏸ 暫停</button>
+	<button id="follow-btn" onclick="toggleFollow()" style="background:#FFD1DC; border-color:#FF6B81;">🎯跟隨: 開</button>
+	<button onclick="resetView()">🏠重置</button>
+</div>
+<div class="bm-row">
+<span class="bm-label">🔖 地點:</span>
+<select id="bm-location-select" class="bm-select" data-placeholder="📂 我的地點" onchange="onBookmarkLocationSelect(this.value)"><option value="">📂 我的地點</option></select>
+<span class="bm-label">🛣️ 路徑:</span>
+<select id="bm-route-select" class="bm-select" data-placeholder="📂 我的路徑" onchange="onBookmarkRouteSelect(this.value)"><option value="">📂 我的路徑</option></select>
+<span class="bm-label">🌐 座標:</span>
+<input type="text" id="lat-input" class="coord-input" placeholder="緯度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
+<input type="text" id="lng-input" class="coord-input" placeholder="經度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
+<button onclick="flyToCoord()" style="padding:5px 14px;font-size:12px;">🚀 飛往</button>
+</div>
+<span id="coords">起點:尚未設定 | 終點:尚未設定</span>
+</div>
+<div id="map"></div>
+<div id="search-results" class="search-results"></div>
+<script>
+// Load Leaflet dynamically so a slow primary CDN cannot block the app scripts.
+(function() {
+    var sources = [
+        "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"
+    ];
+    var index = 0;
+
+    window.leafletCdnFallback = function() {
+        loadLeaflet(index + 1);
+    };
+
+    function loadLeaflet(nextIndex) {
+        if (typeof L !== "undefined") {
+            window.dispatchEvent(new Event("leaflet-ready"));
+            return;
+        }
+        if (window.leafletFallbackLoading) return;
+        index = nextIndex || 0;
+        if (index >= sources.length) {
+            console.error("All Leaflet CDN sources failed");
+            window.dispatchEvent(new Event("leaflet-failed"));
+            return;
+        }
+
+        window.leafletFallbackLoading = true;
+        var s = document.createElement("script");
+        var timeout = setTimeout(function() {
+            s.onload = s.onerror = null;
+            window.leafletFallbackLoading = false;
+            loadLeaflet(index + 1);
+        }, 6000);
+
+        s.src = sources[index];
+        s.crossOrigin = "";
+        s.onload = function() {
+            clearTimeout(timeout);
+            window.leafletFallbackLoading = false;
+            console.log("Leaflet loaded from " + sources[index]);
+            window.dispatchEvent(new Event("leaflet-ready"));
+        };
+        s.onerror = function() {
+            clearTimeout(timeout);
+            window.leafletFallbackLoading = false;
+            loadLeaflet(index + 1);
+        };
+        document.head.appendChild(s);
+    }
+
+    loadLeaflet(0);
+})();
+</script>
+<script>
+(function() {
+    'use strict';
+    
+    console.log('=== 地圖腳本開始 ===');
+    
+    var DEFAULT_CENTER = [24.8153, 120.9661];
+    var map = null;
+    var startMarker = null;
+    var endMarker = null;
+    var currentMarker = null;
+    var routeLine = null;
+    var startPos = null;
+    var endPos = null;
+    var routePoints = [];
+    var routeMarkers = [];
+    var mapInitialized = false;
+    var searchMarker = null;
+    var pointDrag = null;
+    var lastDragSend = 0;
+    var lastServerRouteVersion = -1;
+    var lastCenteredRouteVersion = -1;
+    var mapFollow = true;
+    var lastCurPos = null;
+    var lastSegmentIndex = 0;
+    var walkFrames = ['🚶', '🚶‍♀️'];
+    var walkIdx = 0;
+    var hoverMarker = null;
+    var ignoreMapClick = false;
+    var serverFailCount = 0;
+    var serverDead = false;
+    var traveledLine = null;
+    var remainingLine = null;
+    
+    var loadingScreen = document.getElementById('loading-screen');
+    var loadingProgress = document.getElementById('loading-progress');
+    var mapElement = document.getElementById('map');
+    var toolbarElement = document.getElementById('toolbar');
+    var statusElement = document.getElementById('status');
+    var searchBox = document.getElementById('search-box');
+    var searchResults = document.getElementById('search-results');
+    var bmLocationSelect = document.getElementById('bm-location-select');
+    var bmRouteSelect = document.getElementById('bm-route-select');
+    var latInput = document.getElementById('lat-input');
+    var lngInput = document.getElementById('lng-input');
+
+    function disableOverlayPropagation() {
+        if (typeof L === 'undefined') return;
+        if (toolbarElement) {
+            L.DomEvent.disableClickPropagation(toolbarElement);
+            L.DomEvent.disableScrollPropagation(toolbarElement);
+        }
+        if (searchResults) {
+            L.DomEvent.disableClickPropagation(searchResults);
+            L.DomEvent.disableScrollPropagation(searchResults);
+        }
+        if (bmLocationSelect) {
+            L.DomEvent.disableClickPropagation(bmLocationSelect);
+        }
+        if (bmRouteSelect) {
+            L.DomEvent.disableClickPropagation(bmRouteSelect);
+        }
+        if (latInput) {
+            L.DomEvent.disableClickPropagation(latInput);
+        }
+        if (lngInput) {
+            L.DomEvent.disableClickPropagation(lngInput);
+        }
+    }
+
+    function updateStatus(msg, color) {
+        if (statusElement) {
+            statusElement.textContent = msg;
+            statusElement.style.color = color || '#77DD77';
+        }
+        console.log('[狀態] ' + msg);
+    }
+    
+    function hideLoadingScreen() {
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            setTimeout(function() {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+        if (mapElement) mapElement.classList.add('ready');
+        if (toolbarElement) toolbarElement.classList.add('ready');
+    }
+
+    window.toggleFollow = function() {
+        mapFollow = !mapFollow;
+        var btn = document.getElementById('follow-btn');
+        if (btn) {
+            if (mapFollow) {
+                btn.textContent = '🎯跟隨: 開';
+                btn.style.background = '#FFD1DC';
+            } else {
+                btn.textContent = '🎯跟隨: 關';
+                btn.style.background = '#FFFFFF';
+            }
+        }
+    };
+
+    window.toggleToolbar = function() {
+        var tb = document.getElementById('toolbar');
+        var mapEl = document.getElementById('map');
+        var btn = document.getElementById('toggle-toolbar-btn');
+        if (tb && tb.classList.contains('collapsed')) {
+            tb.classList.remove('collapsed');
+            if (mapEl) mapEl.classList.remove('expanded');
+            if (btn) btn.classList.remove('collapsed');
+        } else if (tb) {
+            tb.classList.add('collapsed');
+            if (mapEl) mapEl.classList.add('expanded');
+            if (btn) btn.classList.add('collapsed');
+            hideSearchResults();
+        }
+        setTimeout(function() {
+            if (map) map.invalidateSize(true);
+        }, 400);
+    };
+
+    function keepToolbarVisible() {
+        if (toolbarElement) {
+            toolbarElement.classList.add('ready');
+            toolbarElement.style.display = 'block';
+            toolbarElement.style.opacity = '1';
+        }
+        if (mapElement) {
+            mapElement.classList.add('ready');
+        }
+    }
+    
+    function initMap() {
+        console.log('=== 開始初始化地圖 ===');
+        if (loadingProgress) loadingProgress.textContent = '創建地圖...';
+        updateStatus('初始化中...', '#ff0');
+        
+        if (typeof L === 'undefined') {
+            console.error('❌ Leaflet 未定義');
+            updateStatus('❌ 初始化失敗', '#f00');
+            return false;
+        }
+        
+        try {
+            disableOverlayPropagation();
+            map = L.map('map', {
+                center: DEFAULT_CENTER,
+                zoom: 16,
+                zoomControl: false
+            });
+            
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            
+            var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19
+            });
+            tileLayer.addTo(map);
+            
+            var tilesLoaded = false;
+            var tileLoadTimeout = setTimeout(function() {
+                if (!tilesLoaded) {
+                    console.log('圖塊載入超時，繼續初始化');
+                    finishInit();
+                }
+            }, 5000);
+            
+            tileLayer.on('load', function() {
+                if (!tilesLoaded) {
+                    tilesLoaded = true;
+                    clearTimeout(tileLoadTimeout);
+                    console.log('✓ 圖塊載入完成');
+                    finishInit();
+                }
+            });
+            
+            function finishInit() {
+                if (mapInitialized) return;
+                
+                setTimeout(function() {
+                    if (map) map.invalidateSize(true);
+                }, 100);
+                
+                map.on('click', function(e) {
+                    if (ignoreMapClick) {
+                        console.log('🛑 忽略地圖點擊（搜尋結果冒泡保護）');
+                        ignoreMapClick = false;
+                        return;
+                    }
+                    addRoutePoint(e.latlng.lat, e.latlng.lng);
+                    hideSearchResults();
+                });
+                
+                map.on('contextmenu', function(e) {
+                    L.DomEvent.preventDefault(e);
+                    hideSearchResults();
+                });
+                
+                // 使用者手動拖曳地圖時自動關閉跟隨模式
+                map.on('dragstart', function() {
+                    if (mapFollow) {
+                        mapFollow = false;
+                        var btn = document.getElementById('follow-btn');
+                        if (btn) {
+                            btn.textContent = '🎯跟隨: 關';
+                            btn.style.background = '#FFFFFF';
+                        }
+                        console.log('🔄 使用者拖曳地圖，跟隨模式已自動關閉');
+                    }
+                });
+                
+                if (searchBox) {
+                    searchBox.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            searchLocation();
+                        }
+                    });
+                }
+
+                mapInitialized = true;
+                updateStatus('✅ 地圖就緒', '#0f0');
+                hideLoadingScreen();
+                map.on('zoomstart zoomend movestart moveend resize', keepToolbarVisible);
+                setTimeout(pollBookmarks, 800);
+                setTimeout(pollPosition, 1000);
+                setTimeout(pollRouteFromPython, 500);
+                
+                console.log('✓✓✓ 地圖初始化成功 ✓✓✓');
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('❌ 地圖初始化錯誤:', error);
+            updateStatus('❌ 初始化失敗', '#f00');
+            return false;
+        }
+    }
+    
+    function addRoutePoint(lat, lng) {
+        if (!map) return;
+        routePoints.push({lat: lat, lng: lng});
+        renderRoutePoints();
+        syncRouteToPython();
+    }
+
+    function removeRoutePoint(index) {
+        if (!map || index < 0 || index >= routePoints.length) return;
+        routePoints.splice(index, 1);
+        renderRoutePoints();
+        syncRouteToPython();
+    }
+
+    function insertRoutePoint(lat, lng) {
+        if (!map || routePoints.length < 2) return;
+        var clickPt = map.latLngToLayerPoint([lat, lng]);
+        var minDist = Infinity;
+        var insertIndex = 1;
+
+        for (var i = 0; i < routePoints.length - 1; i++) {
+            var p1 = map.latLngToLayerPoint([routePoints[i].lat, routePoints[i].lng]);
+            var p2 = map.latLngToLayerPoint([routePoints[i+1].lat, routePoints[i+1].lng]);
+            var dist = L.LineUtil.pointToSegmentDistance(clickPt, p1, p2);
+            if (dist < minDist) {
+                minDist = dist;
+                insertIndex = i + 1;
+            }
+        }
+
+        routePoints.splice(insertIndex, 0, {lat: lat, lng: lng});
+        renderRoutePoints();
+        syncRouteToPython();
+    }
+
+    function showInsertPopup(latlng) {
+        var popupContent = document.createElement('div');
+        popupContent.innerHTML = '<div style="text-align:center;color:#5D4037;"><b>在此處插入途經點？</b><br><button class="insert-btn" style="margin-top:8px; padding:6px 12px; background:#FFB6C1; color:#5D4037; border:1px solid #FF6B81; border-radius:4px; font-weight:bold; cursor:pointer; transition:background 0.2s;">➕ 插入節點</button><br><button class="bmroute-btn" style="margin-top:4px; padding:6px 12px; background:#87CEEB; color:#1a1a2e; border:1px solid #4682B4; border-radius:4px; font-weight:bold; cursor:pointer; transition:background 0.2s;">🛣️ 收藏此路徑</button></div>';
+        var insertBtn = popupContent.querySelector('.insert-btn');
+        insertBtn.onmouseover = function() { this.style.background = '#FFD1DC'; };
+        insertBtn.onmouseout = function() { this.style.background = '#FFB6C1'; };
+        insertBtn.onclick = function() {
+            insertRoutePoint(latlng.lat, latlng.lng);
+            map.closePopup();
+            if (hoverMarker) {
+                map.removeLayer(hoverMarker);
+                hoverMarker = null;
+            }
+        };
+        var bmRouteBtn = popupContent.querySelector('.bmroute-btn');
+        bmRouteBtn.onmouseover = function() { this.style.background = '#B0E0E6'; };
+        bmRouteBtn.onmouseout = function() { this.style.background = '#87CEEB'; };
+        bmRouteBtn.onclick = function() {
+            map.closePopup();
+            if (hoverMarker) {
+                map.removeLayer(hoverMarker);
+                hoverMarker = null;
+            }
+            // 使用自定義模態框取代原生 prompt
+            window.showInputModal('🛣️ 收藏路徑', '', function(desc) {
+                if (desc === null) return; // 取消
+                desc = desc.trim();
+                window.bookmarkRoute(desc);
+            });
+        };
+        L.popup({offset: [0, -10], closeButton: false, autoPan: false})
+            .setLatLng(latlng)
+            .setContent(popupContent)
+            .openOn(map);
+    }
+
+    function getRoutePointInfo(index) {
+        var isStart = index === 0;
+        var isEnd = routePoints.length > 1 && index === routePoints.length - 1;
+        if (isStart) return {label: '起點', color: '#77DD77', size: 22};
+        if (isEnd) return {label: '終點', color: '#FF6961', size: 22};
+        return {label: '途經點 ' + index, color: '#FFB347', size: 20};
+    }
+
+    function createRouteIcon(info, index) {
+        var text = index === 0 ? 'S' : (index === routePoints.length - 1 ? 'E' : String(index));
+        var size = info.size;
+        var fontSize = index > 9 ? 10 : 12;
+        return L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background:' + info.color + ';width:' + size + 'px;height:' + size + 'px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.4);color:white;font-weight:bold;font-size:' + fontSize + 'px;line-height:' + (size - 6) + 'px;text-align:center">' + text + '</div>',
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2]
+        });
+    }
+
+    function getDistanceHtml(index) {
+        if (index <= 0 || !routePoints || routePoints.length < 2) return "";
+        var dist = 0;
+        for (var i = 0; i < index; i++) {
+            var p1 = L.latLng(routePoints[i].lat, routePoints[i].lng);
+            var p2 = L.latLng(routePoints[i+1].lat, routePoints[i+1].lng);
+            dist += p1.distanceTo(p2);
+        }
+        var distStr = dist >= 1000 ? (dist/1000).toFixed(2) + ' km' : Math.round(dist) + ' m';
+        return '<br><span style="color:#FF6B81;font-weight:bold;">📏 距起點: ' + distStr + '</span>';
+    }
+
+    function renderRoutePoints() {
+        routeMarkers.forEach(function(marker) {
+            map.removeLayer(marker);
+        });
+        routeMarkers = [];
+        startMarker = null;
+        endMarker = null;
+
+        routePoints.forEach(function(point, index) {
+            var info = getRoutePointInfo(index);
+            var distHtml = getDistanceHtml(index);
+            var bmHtml = '<br><button onclick="window.bookmarkNode(' + point.lat + ', ' + point.lng + ')" style="width:100%; margin-top:8px; padding:6px; background:#FFD700; color:#5D4037; border:1px solid #DAA520; border-radius:4px; font-weight:bold; cursor:pointer;">🔖 收藏此地點</button>';
+            var jumpHtml = '<br><button onclick="window.jumpToNode(' + index + ')" style="width:100%; margin-top:4px; padding:6px; background:#FFB6C1; color:#5D4037; border:1px solid #FF6B81; border-radius:4px; font-weight:bold; cursor:pointer;">🚀 從此點繼續</button>';
+            var delHtml = '<br><button onclick="window.deleteNode(' + index + ')" style="width:100%; margin-top:4px; padding:6px; background:#FF6961; color:#FFF; border:1px solid #D1495B; border-radius:4px; font-weight:bold; cursor:pointer;">🗑️ 刪除此點</button>';
+            var marker = L.marker([point.lat, point.lng], {icon: createRouteIcon(info, index)})
+                .bindPopup('<b>' + info.label + '</b><br>' + point.lat.toFixed(6) + ', ' + point.lng.toFixed(6) + distHtml + bmHtml + jumpHtml + delHtml, {autoClose: false, closeOnClick: false, autoPan: false})
+                .addTo(map);
+            
+            // 右鍵開啟氣泡
+            marker.on('contextmenu', function(e) {
+                if (e.originalEvent) {
+                    L.DomEvent.preventDefault(e.originalEvent);
+                    L.DomEvent.stop(e.originalEvent);
+                }
+                marker.openPopup();
+            });
+            enableLeftButtonDrag(marker, index);
+            routeMarkers.push(marker);
+        });
+
+        if (routeMarkers.length > 0) startMarker = routeMarkers[0];
+        if (routeMarkers.length > 1) endMarker = routeMarkers[routeMarkers.length - 1];
+
+        startPos = routePoints.length > 0 ? routePoints[0] : null;
+        endPos = routePoints.length > 1 ? routePoints[routePoints.length - 1] : null;
+        updateCoordsDisplay();
+        drawRoute(lastCurPos, lastSegmentIndex);
+    }
+
+    function updateRoutePoint(index, lat, lng, notifyPython) {
+        if (!routePoints[index]) return;
+
+        routePoints[index] = {lat: lat, lng: lng};
+        var marker = routeMarkers[index];
+        var info = getRoutePointInfo(index);
+        if (marker) {
+            var distHtml = getDistanceHtml(index);
+            var bmHtml = '<br><button onclick="window.bookmarkNode(' + lat + ', ' + lng + ')" style="width:100%; margin-top:8px; padding:6px; background:#FFD700; color:#5D4037; border:1px solid #DAA520; border-radius:4px; font-weight:bold; cursor:pointer;">🔖 收藏此地點</button>';
+            var jumpHtml = '<br><button onclick="window.jumpToNode(' + index + ')" style="width:100%; margin-top:4px; padding:6px; background:#FFB6C1; color:#5D4037; border:1px solid #FF6B81; border-radius:4px; font-weight:bold; cursor:pointer;">🚀 從此點繼續</button>';
+            var delHtml = '<br><button onclick="window.deleteNode(' + index + ')" style="width:100%; margin-top:4px; padding:6px; background:#FF6961; color:#FFF; border:1px solid #D1495B; border-radius:4px; font-weight:bold; cursor:pointer;">🗑️ 刪除此點</button>';
+            marker.setLatLng([lat, lng]);
+            marker.setPopupContent('<b>' + info.label + '</b><br>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + distHtml + bmHtml + jumpHtml + delHtml);
+        }
+
+        startPos = routePoints.length > 0 ? routePoints[0] : null;
+        endPos = routePoints.length > 1 ? routePoints[routePoints.length - 1] : null;
+        updateCoordsDisplay();
+        drawRoute(lastCurPos, lastSegmentIndex);
+
+        if (notifyPython) {
+            syncRouteToPython();
+        }
+    }
+
+    function enableLeftButtonDrag(marker, index) {
+        function onStart(e) {
+            var original = e.originalEvent;
+            var isTouch = e.type === 'touchstart';
+            if (!isTouch && (!original || original.button !== 0)) return;
+            if (!map) return;
+
+            if (original) {
+                L.DomEvent.preventDefault(original);
+                L.DomEvent.stop(original);
+            }
+
+            pointDrag = {index: index, marker: marker, isTouch: isTouch};
+            lastDragSend = 0;
+            if (map.dragging) map.dragging.disable();
+            
+            if (isTouch) {
+                document.addEventListener('touchmove', onPointDragMove, {passive: false, capture: true});
+                document.addEventListener('touchend', onPointDragEnd, {passive: false, capture: true});
+                document.addEventListener('touchcancel', onPointDragEnd, {passive: false, capture: true});
+            } else {
+                document.addEventListener('mousemove', onPointDragMove, true);
+                document.addEventListener('mouseup', onPointDragEnd, true);
+            }
+        }
+
+        marker.on('mousedown', onStart);
+        marker.on('touchstart', onStart);
+
+        marker.on('click', function(e) {
+            if (e.originalEvent) {
+                L.DomEvent.preventDefault(e.originalEvent);
+                L.DomEvent.stop(e.originalEvent);
+            }
+            ignoreMapClick = true;
+            setTimeout(function() { ignoreMapClick = false; }, 100);
+        });
+
+    }
+
+    function onPointDragMove(ev) {
+        if (!pointDrag || !map) return;
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var evt = pointDrag.isTouch ? ev.touches[0] : ev;
+        var point = map.mouseEventToContainerPoint(evt);
+        var latlng = map.containerPointToLatLng(point);
+        var now = Date.now();
+        var shouldNotify = now - lastDragSend > 80;
+
+        updateRoutePoint(pointDrag.index, latlng.lat, latlng.lng, shouldNotify);
+        if (shouldNotify) lastDragSend = now;
+    }
+
+    function onPointDragEnd(ev) {
+        if (!pointDrag || !map) return;
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        var evt = pointDrag.isTouch ? ev.changedTouches[0] : ev;
+        var point = map.mouseEventToContainerPoint(evt);
+        var latlng = map.containerPointToLatLng(point);
+        updateRoutePoint(pointDrag.index, latlng.lat, latlng.lng, true);
+
+        var draggedIndex = pointDrag.index;
+        var isTouch = pointDrag.isTouch;
+        pointDrag = null;
+        
+        renderRoutePoints();
+
+        if (isTouch) {
+            document.removeEventListener('touchmove', onPointDragMove, true);
+            document.removeEventListener('touchend', onPointDragEnd, true);
+            document.removeEventListener('touchcancel', onPointDragEnd, true);
+        } else {
+            document.removeEventListener('mousemove', onPointDragMove, true);
+            document.removeEventListener('mouseup', onPointDragEnd, true);
+        }
+        if (map.dragging) map.dragging.enable();
+    }
+    
+    function drawRoute(curPos, segmentIndex) {
+        if (!map) return;
+        
+        // 單點鎖定模式（起終點相同）：不使用分割繪製，避免殘留舊位置造成虛線
+        var isLockMode = routePoints.length === 2 &&
+            routePoints[0].lat === routePoints[1].lat &&
+            routePoints[0].lng === routePoints[1].lng;
+        var isSplit = !isLockMode && curPos && segmentIndex >= 1 && segmentIndex < routePoints.length;
+        
+        if (routePoints.length < 2) {
+            if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+            if (traveledLine) { map.removeLayer(traveledLine); traveledLine = null; }
+            if (remainingLine) { map.removeLayer(remainingLine); remainingLine = null; }
+            return;
+        }
+
+        var popupTimer = null;
+
+        function clearPopupAndMarker() {
+            map.closePopup();
+            if (hoverMarker) {
+                map.removeLayer(hoverMarker);
+                hoverMarker = null;
+            }
+            if (popupTimer) {
+                clearTimeout(popupTimer);
+                popupTimer = null;
+            }
+        }
+
+        var addEvents = function(line) {
+            line.on('mouseover', function(e) {
+                // 滑鼠重新移回路線，取消倒數
+                if (popupTimer) {
+                    clearTimeout(popupTimer);
+                    popupTimer = null;
+                }
+                var icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: '<div style="font-size:20px; text-shadow: 0 0 8px #FF6B81; line-height:24px; text-align:center;">🌸</div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                if (!hoverMarker) {
+                    hoverMarker = L.marker(e.latlng, {icon: icon, interactive: true}).addTo(map);
+                    // 櫻花上按右鍵：連同彈窗一起消失
+                    hoverMarker.on('contextmenu', function(ev) {
+                        if (ev.originalEvent) {
+                            L.DomEvent.preventDefault(ev.originalEvent);
+                            L.DomEvent.stopPropagation(ev.originalEvent);
+                        }
+                        clearPopupAndMarker();
+                    });
+                } else {
+                    hoverMarker.setLatLng(e.latlng);
+                }
+                // 櫻花出現時自動彈出插入節點/收藏路徑視窗
+                showInsertPopup(e.latlng);
+            });
+            line.on('mousemove', function(e) {
+                if (hoverMarker) hoverMarker.setLatLng(e.latlng);
+            });
+            line.on('mouseout', function(e) {
+                // 滑鼠離開路線後 5 秒自動消失
+                if (!popupTimer) {
+                    popupTimer = setTimeout(clearPopupAndMarker, 5000);
+                }
+            });
+        };
+
+        if (isSplit) {
+            if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+            
+            var traveledPts = routePoints.slice(0, segmentIndex);
+            traveledPts.push(curPos);
+            var remainingPts = [curPos].concat(routePoints.slice(segmentIndex));
+            
+            var tLatLngs = traveledPts.map(function(p) { return [p.lat, p.lng]; });
+            var rLatLngs = remainingPts.map(function(p) { return [p.lat, p.lng]; });
+
+            if (!traveledLine) {
+                traveledLine = L.polyline(tLatLngs, {color: '#A9A9A9', weight: 6, opacity: 0.8, dashArray: '10, 10'}).addTo(map);
+                addEvents(traveledLine);
+            } else {
+                traveledLine.setLatLngs(tLatLngs);
+            }
+
+            if (!remainingLine) {
+                remainingLine = L.polyline(rLatLngs, {color: '#FF6B81', weight: 6, opacity: 0.8, dashArray: '10, 10', className: 'flowing-line'}).addTo(map);
+                addEvents(remainingLine);
+            } else {
+                remainingLine.setLatLngs(rLatLngs);
+            }
+        } else {
+            if (traveledLine) { map.removeLayer(traveledLine); traveledLine = null; }
+            if (remainingLine) { map.removeLayer(remainingLine); remainingLine = null; }
+            
+            var latLngs = routePoints.map(function(p) { return [p.lat, p.lng]; });
+            
+            if (!routeLine) {
+                routeLine = L.polyline(latLngs, {color: '#FF6B81', weight: 6, opacity: 0.8, dashArray: '10, 10', className: 'flowing-line'}).addTo(map);
+                addEvents(routeLine);
+            } else {
+                routeLine.setLatLngs(latLngs);
+            }
+        }
+    }
+    
+    function updateCoordsDisplay() {
+        var coordsEl = document.getElementById('coords');
+        if (!coordsEl) return;
+        
+        var s = startPos ? 
+            '<b>起點:</b>' + startPos.lat.toFixed(6) + ', ' + startPos.lng.toFixed(6) : 
+            '<b>起點:</b>尚未設定';
+        var e = endPos ? 
+            '<b>終點:</b>' + endPos.lat.toFixed(6) + ', ' + endPos.lng.toFixed(6) : 
+            '<b>終點:</b>尚未設定';
+        var w = routePoints.length > 2 ? ' | <b>途經點:</b>' + (routePoints.length - 2) + ' 個' : '';
+        coordsEl.innerHTML = s + ' | ' + e + w;
+    }
+    
+    window.searchLocation = function() {
+        var query = searchBox.value.trim();
+        if (!query) {
+            updateStatus('⚠ 請輸入搜尋關鍵字', '#FFB347');
+            return;
+        }
+        
+        updateStatus('🔍 搜尋中...', '#FFB347');
+        console.log('搜尋: ' + query);
+        
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + 
+                  encodeURIComponent(query) + 
+                  '&limit=10&addressdetails=1&accept-language=zh-TW,zh,en';
+        
+        fetch(url, {
+            headers: {'User-Agent': 'GPS-Simulator-App'}
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.length === 0) {
+                updateStatus('❌ 找不到地點', '#FF6961');
+                hideSearchResults();
+                return;
+            }
+            
+            console.log('✓ 找到 ' + data.length + ' 個結果');
+            updateStatus('✓ 找到 ' + data.length + ' 個結果', '#77DD77');
+            showSearchResults(data);
+        })
+        .catch(function(error) {
+            console.error('搜尋錯誤:', error);
+            updateStatus('❌ 搜尋失敗', '#FF6961');
+        });
+    };
+    
+    function showSearchResults(results) {
+        if (!searchResults) return;
+        
+        console.log('顯示搜尋結果，共 ' + results.length + ' 筆');
+        searchResults.innerHTML = '';
+        
+        var typeMap = {
+            'tourism': '景點',
+            'peak': '山峰',
+            'volcano': '火山',
+            'mountain_pass': '山口',
+            'amenity': '設施',
+            'building': '建築',
+            'natural': '自然景觀',
+            'place': '地點'
+        };
+        
+        results.forEach(function(result, index) {
+            console.log('創建搜尋結果項目 #' + index + ': ' + result.display_name);
+            
+            var item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.setAttribute('data-index', index);
+            
+            var name = document.createElement('div');
+            name.className = 'result-name';
+            name.textContent = result.display_name.split(',')[0];
+            
+            var address = document.createElement('div');
+            address.className = 'result-address';
+            address.textContent = result.display_name;
+            
+            var type = document.createElement('div');
+            type.className = 'result-type';
+            if (result.type) {
+                var typeName = typeMap[result.type] || result.type;
+                type.textContent = '類型: ' + typeName;
+            }
+            
+            item.appendChild(name);
+            item.appendChild(address);
+            if (result.type) {
+                item.appendChild(type);
+            }
+            
+            // 使用閉包確保正確捕獲 result
+            (function(r) {
+                item.addEventListener('click', function(e) {
+                    console.log('=== 點擊搜尋結果 ===');
+                    console.log('項目:', r.display_name);
+                    e.stopPropagation();
+                    selectSearchResult(r);
+                });
+            })(result);
+            
+            searchResults.appendChild(item);
+        });
+        
+        searchResults.classList.add('show');
+        console.log('搜尋結果已顯示');
+    }
+    
+    function selectSearchResult(result) {
+        console.log('=== 選擇搜尋結果 ===');
+        console.log('地點:', result.display_name);
+        
+        var lat = parseFloat(result.lat);
+        var lng = parseFloat(result.lon);
+        console.log('座標:', lat, lng);
+        
+        if (!map) {
+            console.error('❌ 地圖對象不存在');
+            return;
+        }
+        
+        // 設定標記，阻止地圖 click 事件處理（避免冒泡新增路線點）
+        ignoreMapClick = true;
+        
+        // 立即隱藏搜尋結果
+        hideSearchResults();
+        console.log('✓ 搜尋結果已隱藏');
+        
+        // 跳轉到該位置
+        console.log('執行地圖跳轉...');
+        map.setView([lat, lng], 15, {
+            animate: true,
+            duration: 1
+        });
+        console.log('✓ 地圖跳轉完成');
+        
+        // 強制刷新地圖
+        setTimeout(function() {
+            if (map) {
+                map.invalidateSize(true);
+                console.log('✓ 地圖尺寸已刷新');
+            }
+        }, 500);
+        
+        // 移除舊標記
+        if (searchMarker) {
+            map.removeLayer(searchMarker);
+        }
+        
+        // 添加新標記
+        var icon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background:#FFB347;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.1)"></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        
+        searchMarker = L.marker([lat, lng], {icon: icon})
+            .bindPopup('<b>🔍搜尋結果</b><br>' + result.display_name + '<br><small>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</small><br><button onclick="window.flyAndLock(' + lat + ', ' + lng + ')" style="width:100%; margin-top:8px; padding:6px; background:#FFB6C1; color:#5D4037; border:1px solid #FF6B81; border-radius:4px; font-weight:bold; cursor:pointer;">🚀 一鍵飛往並鎖定</button><br><button onclick="window.bookmarkNode(' + lat + ', ' + lng + ')" style="width:100%; margin-top:4px; padding:6px; background:#FFD700; color:#5D4037; border:1px solid #DAA520; border-radius:4px; font-weight:bold; cursor:pointer;">🔖 收藏此地點</button>', {autoPan: false})
+            .addTo(map);
+        
+        console.log('✓ 標記已添加');
+        
+        // 打開彈窗
+        setTimeout(function() {
+            if (searchMarker) {
+                searchMarker.openPopup();
+                console.log('✓ 彈窗已打開');
+            }
+            // 延遲重設 ignoreMapClick，確保地圖 click 事件不會被觸發
+            setTimeout(function() { ignoreMapClick = false; }, 100);
+        }, 600);
+        
+        updateStatus('✓ ' + result.display_name.split(',')[0], '#77DD77');
+        console.log('=== 搜尋結果選擇完成 ===');
+    }
+
+    window.flyAndLock = function(lat, lng) {
+        console.log('🚀 一鍵飛往並鎖定: ' + lat + ', ' + lng);
+        routePoints = [
+            {lat: lat, lng: lng},
+            {lat: lat, lng: lng}
+        ];
+        renderRoutePoints();
+        syncRouteToPython();
+        sendToPython('auto_start', lat, lng);
+        if (searchMarker) {
+            map.removeLayer(searchMarker);
+            searchMarker = null;
+        }
+    };
+    
+    function hideSearchResults() {
+        if (searchResults) {
+            searchResults.classList.remove('show');
+            console.log('搜尋結果已隱藏');
+        }
+    }
+    
+    function clearStartEndPoints() {
+        if (!map) return;
+        routeMarkers.forEach(function(marker) {
+            map.removeLayer(marker);
+        });
+        if (routeLine) map.removeLayer(routeLine);
+        if (traveledLine) { map.removeLayer(traveledLine); traveledLine = null; }
+        if (remainingLine) { map.removeLayer(remainingLine); remainingLine = null; }
+        if (hoverMarker) {
+            map.removeLayer(hoverMarker);
+            hoverMarker = null;
+        }
+
+        routePoints = [];
+        routeMarkers = [];
+        startMarker = null;
+        endMarker = null;
+        routeLine = null;
+        startPos = null;
+        endPos = null;
+        lastCurPos = null;
+        lastSegmentIndex = 0;
+
+        updateCoordsDisplay();
+        sendToPython('clear', 0, 0);
+    }
+
+    window.clearMarkers = function() {
+        if (!map) return;
+        if (currentMarker) map.removeLayer(currentMarker);
+        if (searchMarker) map.removeLayer(searchMarker);
+        
+        currentMarker = null;
+        searchMarker = null;
+        clearStartEndPoints();
+    };
+    
+    window.fitRoute = function() {
+        if (!map || routePoints.length === 0) return;
+        var bounds = L.latLngBounds(routePoints.map(function(point) {
+            return [point.lat, point.lng];
+        }));
+        map.fitBounds(bounds, {padding: [80, 80]});
+    };
+    
+    window.resetView = function() {
+        if (map) {
+            clearStartEndPoints();
+            map.setView(DEFAULT_CENTER, 16);
+        }
+    };
+    
+    window.panToCurrent = function() {
+        if (map && lastCurPos) {
+            map.panTo([lastCurPos.lat, lastCurPos.lng], {animate: true, duration: 0.5});
+        } else if (map && startPos) {
+            map.panTo([startPos.lat, startPos.lng], {animate: true, duration: 0.5});
+        } else {
+            updateStatus('尚未有目前定位', '#FFB347');
+        }
+    };
+    
+    window.startSimulation = function() {
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'start_simulation'})
+        }).catch(function() {});
+    };
+
+    window.togglePause = function() {
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'toggle_pause'})
+        }).catch(function() {});
+    };
+
+    function updateStartButton(hasRoute, running) {
+        var btn = document.getElementById('toolbar-start-btn');
+        if (!btn) return;
+        if (running) {
+            btn.textContent = '🔄 模擬中...';
+            btn.style.background = '#B0C4DE';
+            btn.style.borderColor = '#4682B4';
+            btn.style.cursor = 'default';
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.7';
+        } else if (hasRoute) {
+            btn.textContent = '🚀 開始模擬';
+            btn.style.background = '#77DD77';
+            btn.style.borderColor = '#2E8B57';
+            btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        } else {
+            btn.textContent = '🚀 開始模擬';
+            btn.style.background = '#D3D3D3';
+            btn.style.borderColor = '#A9A9A9';
+            btn.style.cursor = 'default';
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.5';
+        }
+    }
+
+    function updatePauseButtons(active, paused) {
+        ['toolbar-pause-btn'].forEach(function(id) {
+            var btn = document.getElementById(id);
+            if (!btn) return;
+            btn.style.opacity = active ? '1' : '0.5';
+            btn.style.pointerEvents = active ? 'auto' : 'none';
+            if (paused) {
+                btn.textContent = '▶ 繼續';
+                btn.style.background = '#77DD77';
+                btn.style.borderColor = '#2E8B57';
+            } else {
+                btn.textContent = '⏸ 暫停';
+                btn.style.background = '#FFB347';
+                btn.style.borderColor = '#FF8C00';
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable)) {
+            return;
+        }
+        if (e.code === 'Space' || e.key === ' ') {
+            e.preventDefault();
+            var btn = document.getElementById('toolbar-pause-btn');
+            if (btn && btn.style.pointerEvents !== 'none') {
+                window.togglePause();
+            }
+        }
+    });
+    
+    function sendToPython(action, lat, lng) {
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: action, lat: lat, lng: lng})
+        }).catch(function() {});
+    }
+
+    window.jumpToNode = function(index) {
+        // 關閉冒泡並禁止重新渲染時自動開啟
+        if (map) map.closePopup();
+        window._suppressPopup = true;
+        setTimeout(function() { window._suppressPopup = false; }, 300);
+        
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'jump_to_node', index: index})
+        }).catch(function() {});
+    };
+
+    window.deleteNode = function(index) {
+        // 關閉冒泡並禁止重新渲染時自動開啟
+        if (map) map.closePopup();
+        window._suppressPopup = true;
+        setTimeout(function() { window._suppressPopup = false; }, 300);
+        
+        removeRoutePoint(index);
+    };
+
+    // ── 自定義輸入模態框（取代原生 prompt）──
+    window.showInputModal = function(title, defaultValue, callback) {
+        // 移除可能殘留的舊模態框
+        var oldOverlay = document.getElementById('input-modal-overlay');
+        if (oldOverlay) oldOverlay.parentNode.removeChild(oldOverlay);
+
+        var overlay = document.createElement('div');
+        overlay.id = 'input-modal-overlay';
+
+        var box = document.createElement('div');
+        box.id = 'input-modal-box';
+
+        var titleEl = document.createElement('div');
+        titleEl.id = 'input-modal-title';
+        titleEl.textContent = title;
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'input-modal-input';
+        input.value = defaultValue || '';
+        input.placeholder = '請輸入名稱…';
+
+        var btnRow = document.createElement('div');
+        btnRow.id = 'input-modal-buttons';
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.id = 'input-modal-cancel';
+        cancelBtn.textContent = '取消';
+
+        var confirmBtn = document.createElement('button');
+        confirmBtn.id = 'input-modal-confirm';
+        confirmBtn.textContent = '確定';
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(confirmBtn);
+        box.appendChild(titleEl);
+        box.appendChild(input);
+        box.appendChild(btnRow);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function closeModal(value) {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (typeof callback === 'function') callback(value);
+        }
+
+        // 點擊遮罩關閉（視為取消）
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeModal(null);
+        });
+
+        cancelBtn.addEventListener('click', function() {
+            closeModal(null);
+        });
+
+        confirmBtn.addEventListener('click', function() {
+            closeModal(input.value);
+        });
+
+        // 按 Enter 確認，按 Esc 取消
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); closeModal(input.value); }
+            if (e.key === 'Escape') { e.preventDefault(); closeModal(null); }
+        });
+
+        // 自動聚焦輸入框
+        setTimeout(function() { input.focus(); input.select(); }, 100);
+    };
+
+    window.bookmarkNode = function(lat, lng) {
+        if (map) map.closePopup();
+        var defaultDesc = lat.toFixed(6) + ', ' + lng.toFixed(6);
+        window.showInputModal('🔖 收藏地點', defaultDesc, function(desc) {
+            if (desc === null) return; // 取消
+            desc = desc.trim();
+            if (!desc) desc = defaultDesc;
+            fetch('http://127.0.0.1:__PORT__/map_event', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'bookmark_location', lat: lat, lng: lng, description: desc})
+            }).catch(function() {});
+        });
+    };
+
+    window.bookmarkRoute = function(desc) {
+        if (map) map.closePopup();
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'bookmark_route', description: desc || ''})
+        }).catch(function() {});
+    };
+
+    // 經緯度飛往功能（含貼上自動解析）
+    window.flyToCoord = function() {
+        if (!map) return;
+        var latVal = (latInput ? latInput.value.trim() : '');
+        var lngVal = (lngInput ? lngInput.value.trim() : '');
+
+        // 如果其中一個欄位是空的，嘗試從另一個欄位解析出 "lat, lng" 格式
+        if (!latVal && lngVal) {
+            var m = lngVal.match(/([\d.]+)\s*[,，\s]\s*([\d.]+)/);
+            if (m) { latVal = m[1]; lngVal = m[2]; }
+        }
+        if (!lngVal && latVal) {
+            var m = latVal.match(/([\d.]+)\s*[,，\s]\s*([\d.]+)/);
+            if (m) { latVal = m[1]; lngVal = m[2]; }
+        }
+
+        var lat = parseFloat(latVal);
+        var lng = parseFloat(lngVal);
+        if (isNaN(lat) || isNaN(lng)) {
+            updateStatus('⚠️ 請輸入有效的經緯度數值', '#FF8C00');
+            return;
+        }
+
+        // 更新輸入欄位
+        if (latInput) latInput.value = lat.toFixed(6);
+        if (lngInput) lngInput.value = lng.toFixed(6);
+
+        // 設定路線為單點並飛往鎖定
+        routePoints = [
+            {lat: lat, lng: lng},
+            {lat: lat, lng: lng}
+        ];
+        renderRoutePoints();
+        syncRouteToPython();
+        sendToPython('auto_start', lat, lng);
+        updateStatus('🚀 已飛往 ' + lat.toFixed(6) + ', ' + lng.toFixed(6), '#77DD77');
+    };
+
+    // 貼上事件處理：自動解析 "lat, lng" 格式
+    (function() {
+        function handleCoordPaste(e, sourceInputId) {
+            var src = document.getElementById(sourceInputId);
+            if (!src) return;
+            var pasteHandler = function(ev) {
+                var clipboardData = (ev.clipboardData || window.clipboardData);
+                if (!clipboardData) return;
+                var pasted = clipboardData.getData('Text');
+                if (!pasted) return;
+                // 嘗試匹配經緯度格式: 25.033, 121.564 或 (25.033, 121.564) 或 25.033 121.564
+                var m = pasted.match(/([\d.]+)\s*[,，\s]\s*([\d.]+)/);
+                if (m) {
+                    ev.preventDefault();
+                    var latEl = document.getElementById('lat-input');
+                    var lngEl = document.getElementById('lng-input');
+                    if (latEl) latEl.value = m[1];
+                    if (lngEl) lngEl.value = m[2];
+                    // 自動觸發飛往
+                    setTimeout(function() { window.flyToCoord(); }, 80);
+                }
+            };
+            src.addEventListener('paste', pasteHandler);
+        }
+        // 延遲綁定確保 DOM 已存在
+        setTimeout(function() {
+            handleCoordPaste(null, 'lat-input');
+            handleCoordPaste(null, 'lng-input');
+        }, 300);
+    })();
+
+    window.onBookmarkLocationSelect = function(value) {
+        if (!value) return;
+        try {
+            console.log('[onBookmarkLocationSelect] value:', value);
+            var data = JSON.parse(value);
+            console.log('[onBookmarkLocationSelect] parsed lat:', data.lat, 'lng:', data.lng);
+            routePoints = [
+                {lat: data.lat, lng: data.lng},
+                {lat: data.lat, lng: data.lng}
+            ];
+            // 清除前次模擬的當前位置，避免 drawRoute 用舊位置繪製虛線
+            lastCurPos = null;
+            lastSegmentIndex = 1;
+            renderRoutePoints();
+            syncRouteToPython();
+            sendToPython('auto_start', data.lat, data.lng);
+            if (map) map.setView([data.lat, data.lng], 17, {animate: true, duration: 0.8});
+            if (bmLocationSelect) bmLocationSelect.value = '';
+        } catch(e) {
+            console.error('[onBookmarkLocationSelect] error:', e);
+        }
+    };
+
+    window.onBookmarkRouteSelect = function(value) {
+        if (!value) return;
+        try {
+            console.log('[onBookmarkRouteSelect] value:', value);
+            var data = JSON.parse(value);
+            var pts = data.points || [];
+            console.log('[onBookmarkRouteSelect] pts.length:', pts.length);
+            if (pts.length >= 2) {
+                routePoints = pts.map(function(p) { return {lat: p[0], lng: p[1]}; });
+                console.log('[onBookmarkRouteSelect] routePoints:', routePoints.length);
+                // 清除前次模擬的當前位置，避免 drawRoute 用舊位置繪製虛線
+                lastCurPos = null;
+                lastSegmentIndex = 1;
+                renderRoutePoints();
+                syncRouteToPython();
+                if (map) map.fitBounds(routePoints.map(function(p) { return [p.lat, p.lng]; }), {padding: [80, 80]});
+            } else {
+                console.warn('[onBookmarkRouteSelect] pts.length < 2, not rendering');
+            }
+            if (bmRouteSelect) bmRouteSelect.value = '';
+        } catch(e) {
+            console.error('[onBookmarkRouteSelect] error:', e);
+        }
+    };
+
+    function populateSelect(selectEl, items, valueFn, textFn) {
+        if (!selectEl) return;
+        // keep placeholder
+        selectEl.innerHTML = '<option value="">' + selectEl.getAttribute('data-placeholder') + '</option>';
+        items.forEach(function(item) {
+            var opt = document.createElement('option');
+            opt.value = valueFn(item);
+            opt.textContent = textFn(item);
+            selectEl.appendChild(opt);
+        });
+    }
+
+    function pollBookmarks() {
+        if (!mapInitialized || !map) {
+            setTimeout(pollBookmarks, 2000);
+            return;
+        }
+        // poll locations
+        fetch('http://127.0.0.1:__PORT__/bookmarks')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var items = d.items || [];
+                populateSelect(
+                    bmLocationSelect,
+                    items,
+                    function(item) { return JSON.stringify({lat: item.lat, lng: item.lng}); },
+                    function(item) { return item.line || (item.lat.toFixed(6) + ', ' + item.lng.toFixed(6)); }
+                );
+            }).catch(function() {});
+        // poll routes
+        fetch('http://127.0.0.1:__PORT__/bookmarked_routes')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var items = d.items || [];
+                populateSelect(
+                    bmRouteSelect,
+                    items,
+                    function(item) { return JSON.stringify({points: item.points || []}); },
+                    function(item) {
+                        var desc = item.description || '自訂路徑';
+                        var n = (item.points || []).length;
+                        return (item.timestamp ? '[' + item.timestamp + '] ' : '') + desc + ' (' + n + '點)';
+                    }
+                );
+            }).catch(function() {});
+        // re-poll every 5 seconds to stay in sync
+        setTimeout(pollBookmarks, 5000);
+    }
+
+    function syncRouteToPython() {
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'route', points: routePoints})
+        }).catch(function() {});
+    }
+
+    function pollRouteFromPython() {
+        if (!mapInitialized || !map) {
+            setTimeout(pollRouteFromPython, 1000);
+            return;
+        }
+
+        fetch('http://127.0.0.1:__PORT__/route_points')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (pointDrag) return;
+                if (typeof data.version !== 'number' || data.version === lastServerRouteVersion) return;
+
+                lastServerRouteVersion = data.version;
+                routePoints = (data.points || []).map(function(point) {
+                    return {lat: parseFloat(point.lat), lng: parseFloat(point.lng)};
+                }).filter(function(point) {
+                    return isFinite(point.lat) && isFinite(point.lng);
+                });
+                renderRoutePoints();
+                updateStartButton(routePoints.length >= 2, false);
+
+                if (data.center && lastCenteredRouteVersion !== data.version) {
+                    lastCenteredRouteVersion = data.version;
+                    map.setView([data.center.lat, data.center.lng], data.center.zoom || 17, {
+                        animate: true,
+                        duration: 0.8
+                    });
+                }
+            })
+            .catch(function() {})
+            .finally(function() {
+                if (!serverDead) {
+                    setTimeout(pollRouteFromPython, 500);
+                }
+            });
+    }
+    
+    function checkShouldClose() {
+        fetch('http://127.0.0.1:__PORT__/should_close')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.close) {
+                    console.log('🚪 收到關閉指令，關閉地圖視窗');
+                    window.close();
+                }
+            })
+            .catch(function() {});
+    }
+
+    function pollPosition() {
+        if (!mapInitialized || !map) {
+            setTimeout(pollPosition, 1000);
+            return;
+        }
+        
+        // 每次輪詢位置時也檢查是否需要關閉
+        checkShouldClose();
+        
+        fetch('http://127.0.0.1:__PORT__/current_pos')
+            .then(function(r) { 
+                if (!r.ok) throw new Error('network');
+                serverFailCount = 0;
+                return r.json(); 
+            })
+            .then(function(d) {
+                if (d.active && map && routePoints.length >= 2) {
+                    var pos = [d.lat, d.lng];
+                    lastCurPos = {lat: d.lat, lng: d.lng};
+                    lastSegmentIndex = d.segment_index;
+                    
+                    if (!currentMarker) {
+                        var icon = L.divIcon({
+                            className: 'custom-marker',
+                            html: '<div style="position:relative;width:100%;height:100%;"><div class="radar-ring"></div><div class="radar-ring delay"></div><div id="player-avatar" style="position:absolute;top:50%;left:50%;margin:-16px 0 0 -12px;width:24px;height:24px;font-size:24px;line-height:24px;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,0.3);z-index:3;transition:transform 0.4s ease-out;">▲</div></div>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        currentMarker = L.marker(pos, {icon: icon})
+                            .bindPopup('<b>📍目前位置</b><br><button onclick="window.bookmarkNode(' + d.lat + ', ' + d.lng + ')" style="margin-top:4px;padding:4px 10px;background:#FFD700;color:#5D4037;border:1px solid #DAA520;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🔖 收藏此位置</button>', {autoClose: false, closeOnClick: false, autoPan: false})
+                            .addTo(map);
+                        currentMarker.openPopup();
+                    } else {
+                        currentMarker.setLatLng(pos);
+                    }
+                    
+                    var avatarEl = document.getElementById('player-avatar');
+                    if (avatarEl) {
+                        var rotation = d.bearing ? d.bearing : 0;
+                        if (d.paused) {
+                            avatarEl.textContent = '■';
+                            avatarEl.style.transform = 'rotate(' + rotation + 'deg)';
+                        } else {
+                            avatarEl.textContent = '▲';
+                            avatarEl.style.transform = 'rotate(' + rotation + 'deg)';
+                        }
+                    }
+                    
+                    if (mapFollow) {
+                        map.panTo(pos, {animate: true, duration: 0.4});
+                    }
+                    var el = currentMarker.getElement();
+                    if (el) {
+                        if (d.paused) {
+                            el.classList.add('blink-marker');
+                            currentMarker.setPopupContent('<b>📍目前位置 <span style="color:#ff9800;">(⏸已暫停)</span></b><br><button onclick="window.bookmarkNode(' + d.lat + ', ' + d.lng + ')" style="margin-top:4px;padding:4px 10px;background:#FFD700;color:#5D4037;border:1px solid #DAA520;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🔖 收藏此位置</button>');
+                        } else {
+                            el.classList.remove('blink-marker');
+                            currentMarker.setPopupContent('<b>📍目前位置</b><br><button onclick="window.bookmarkNode(' + d.lat + ', ' + d.lng + ')" style="margin-top:4px;padding:4px 10px;background:#FFD700;color:#5D4037;border:1px solid #DAA520;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🔖 收藏此位置</button>');
+                        }
+                    }
+                    
+                    var infoPanel = document.getElementById('info-panel');
+                    if (d.dist_str && d.eta_str && infoPanel) {
+                        document.getElementById('info-dist').textContent = '📏 距離: ' + d.dist_str;
+                        if (d.paused) {
+                            document.getElementById('info-eta').textContent = '⏸ 暫停中: ' + d.eta_str;
+                            infoPanel.classList.add('paused');
+                        } else {
+                            document.getElementById('info-eta').textContent = '⏳ 預估: ' + d.eta_str;
+                            infoPanel.classList.remove('paused');
+                        }
+                        infoPanel.classList.add('show');
+                    }
+                    drawRoute(lastCurPos, lastSegmentIndex);
+                    
+                    updatePauseButtons(true, d.paused);
+                    updateStartButton(true, true);
+                } else {
+                    if (currentMarker) {
+                        map.removeLayer(currentMarker);
+                        currentMarker = null;
+                        lastCurPos = null;
+                    }
+                    var infoPanel = document.getElementById('info-panel');
+                    if (infoPanel) infoPanel.classList.remove('show');
+                    drawRoute(lastCurPos, lastSegmentIndex);
+                    
+                    updatePauseButtons(false, false);
+                    updateStartButton(routePoints.length >= 2, false);
+                }
+            })
+            .catch(function(e) {
+                serverFailCount++;
+                if (serverFailCount >= 2) {
+                    updateStatus('等待模擬器連線...', '#FFB347');
+                }
+            })
+            .finally(function() {
+                if (!serverDead) {
+                    setTimeout(pollPosition, 500);
+                }
+            });
+    }
+    
+    // 啟動初始化：Leaflet 可能比 window.load 晚到，尤其是 CDN fallback。
+    var leafletWaitAttempts = 0;
+    var initStarted = false;
+    function startWhenLeafletReady() {
+        if (initStarted || mapInitialized) return;
+        initStarted = true;
+        if (typeof L !== 'undefined') {
+            setTimeout(initMap, 100);
+            return;
+        }
+        initStarted = false;
+
+        leafletWaitAttempts++;
+        if (loadingProgress) loadingProgress.textContent = '等待地圖程式載入...';
+        updateStatus('等待 Leaflet 載入...', '#FFB347');
+
+        if (leafletWaitAttempts === 6 && typeof window.leafletCdnFallback === 'function') {
+            window.leafletCdnFallback();
+        }
+
+        if (leafletWaitAttempts < 80) {
+            setTimeout(startWhenLeafletReady, 250);
+        } else {
+            updateStatus('地圖程式載入失敗，請檢查網路', '#FF6961');
+            if (loadingProgress) loadingProgress.textContent = 'Leaflet 載入失敗，請重新整理或檢查網路';
+        }
+    }
+
+    window.addEventListener('load', startWhenLeafletReady);
+    window.addEventListener('leaflet-ready', startWhenLeafletReady);
+    startWhenLeafletReady();
+    
+    console.log('=== 腳本載入完成 ===');
+})();
+</script>
+</body>
+</html>
