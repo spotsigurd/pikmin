@@ -38,11 +38,11 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                     if getattr(self.app_core, '_force_map_center_version', -1) == self.app_core.route_version and points:
                         center = {'lat': points[0][0], 'lng': points[0][1], 'zoom': 17}
                         self.app_core._force_map_center_version = -1
-                    elif len(points) >= 2:
-                        s_lat, s_lng = points[0]
-                        e_lat, e_lng = points[-1]
-                        if abs(s_lat - e_lat) < 0.0000001 and abs(s_lng - e_lng) < 0.0000001:
-                            center = {'lat': s_lat, 'lng': s_lng, 'zoom': 17}
+                    #elif len(points) >= 2:
+                    #    s_lat, s_lng = points[0]
+                    #    e_lat, e_lng = points[-1]
+                    #    if abs(s_lat - e_lat) < 0.0000001 and abs(s_lng - e_lng) < 0.0000001:
+                    #        center = {'lat': s_lat, 'lng': s_lng, 'zoom': 17}
                     data = {'version': self.app_core.route_version, 'points': [{'lat': lat, 'lng': lng} for lat, lng in points], 'center': center}
                 self._json(data)
             elif self.path == '/should_close':
@@ -173,7 +173,7 @@ class SimulatorCore:
             if points != self.route_points:
                 self.route_points = points
                 self.route_version += 1
-                self._force_map_center_version = self.route_version
+                #self._force_map_center_version = self.route_version
 
     def _start_map_server(self):
         MapServer.app_core = self

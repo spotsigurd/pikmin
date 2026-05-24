@@ -318,7 +318,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             map = L.map('map', {
                 center: DEFAULT_CENTER,
                 zoom: 16,
-                zoomControl: false
+                zoomControl: false,
+                doubleClickZoom: false  // 👈 新增這一行，關閉預設的雙擊縮放
             });
             
             L.control.zoom({ position: 'bottomright' }).addTo(map);
