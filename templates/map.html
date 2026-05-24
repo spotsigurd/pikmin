@@ -691,42 +691,36 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         }
 
         var addEvents = function(line) {
-            line.on('mouseover', function(e) {
-                // 滑鼠重新移回路線，取消倒數
-                if (popupTimer) {
-                    clearTimeout(popupTimer);
-                    popupTimer = null;
+            // 改為右鍵 (contextmenu) 觸發
+            line.on('contextmenu', function(e) {
+                // 阻止事件傳遞給地圖，避免觸發瀏覽器或地圖的預設右鍵行為
+                if (e.originalEvent) {
+                    L.DomEvent.stopPropagation(e.originalEvent);
+                    L.DomEvent.preventDefault(e.originalEvent);
                 }
+                
                 var icon = L.divIcon({
                     className: 'custom-marker',
                     html: '<div style="font-size:20px; text-shadow: 0 0 8px #FF6B81; line-height:24px; text-align:center;">🌸</div>',
                     iconSize: [24, 24],
                     iconAnchor: [12, 12]
                 });
-                if (!hoverMarker) {
-                    hoverMarker = L.marker(e.latlng, {icon: icon, interactive: true}).addTo(map);
-                    // 櫻花上按右鍵：連同彈窗一起消失
-                    hoverMarker.on('contextmenu', function(ev) {
-                        if (ev.originalEvent) {
-                            L.DomEvent.preventDefault(ev.originalEvent);
-                            L.DomEvent.stopPropagation(ev.originalEvent);
-                        }
-                        clearPopupAndMarker();
-                    });
-                } else {
-                    hoverMarker.setLatLng(e.latlng);
-                }
-                // 櫻花出現時自動彈出插入節點/收藏路徑視窗
+                
+                // 清除舊的櫻花
+                if (hoverMarker) map.removeLayer(hoverMarker);
+                
+                hoverMarker = L.marker(e.latlng, {icon: icon, interactive: true}).addTo(map);
+                
+                // 櫻花上按右鍵：關閉
+                hoverMarker.on('contextmenu', function(ev) {
+                    if (ev.originalEvent) {
+                        L.DomEvent.preventDefault(ev.originalEvent);
+                        L.DomEvent.stopPropagation(ev.originalEvent);
+                    }
+                    clearPopupAndMarker();
+                });
+                
                 showInsertPopup(e.latlng);
-            });
-            line.on('mousemove', function(e) {
-                if (hoverMarker) hoverMarker.setLatLng(e.latlng);
-            });
-            line.on('mouseout', function(e) {
-                // 滑鼠離開路線後 5 秒自動消失
-                if (!popupTimer) {
-                    popupTimer = setTimeout(clearPopupAndMarker, 5000);
-                }
             });
         };
 
