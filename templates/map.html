@@ -57,7 +57,18 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 .result-type{font-size:11px;color:#999;margin-top:4px;font-style:italic}
 .bm-row{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .ctrl-row{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
-.bm-select{flex:1;padding:6px 10px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0;max-width:280px}
+.bm-dropdown{position:relative;flex:1;max-width:280px;min-width:190px}
+.bm-dropdown-btn{width:100%;height:30px;padding:5px 28px 5px 10px;margin:0;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;font-size:12px;font-weight:700;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.bm-dropdown-btn:after{content:'▾';position:absolute;right:10px;top:5px;color:#FF6B81}
+.bm-menu{display:none;position:absolute;top:34px;left:0;right:0;max-height:260px;overflow-y:auto;background:#FFFFFF;border:2px solid #FFB6C1;border-radius:8px;box-shadow:0 8px 22px rgba(0,0,0,.16);z-index:7000}
+.bm-dropdown.open .bm-menu{display:block}
+.bm-item{display:flex;align-items:center;gap:6px;border-bottom:1px solid #FFE3E8}
+.bm-item:last-child{border-bottom:none}
+.bm-item-text{flex:1;min-width:0;padding:8px 6px 8px 10px;color:#5D4037;font-size:12px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.bm-item-text:hover{background:#FFF0F5}
+.bm-item-delete{width:30px;height:30px;flex:0 0 30px;padding:0;margin:3px 4px 3px 0;border-radius:6px;background:#FFFFFF;color:#D1495B;border:1px solid #FFB6C1;font-size:13px;line-height:1}
+.bm-item-delete:hover{background:#FFE3E8;border-color:#FF6961}
+.bm-empty{padding:8px 10px;color:#999;font-size:12px}
 .bm-label{font-size:11px;font-weight:700;color:#5D4037;white-space:nowrap}
 .coord-input-row{display:flex;gap:6px;margin-top:4px;align-items:center}
 .coord-input{width:100px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
@@ -107,9 +118,15 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 </div>
 <div class="bm-row">
 <span class="bm-label">🔖 地點:</span>
-<select id="bm-location-select" class="bm-select" data-placeholder="📂 我的地點" onchange="onBookmarkLocationSelect(this.value)"><option value="">📂 我的地點</option></select>
+<div id="bm-location-dropdown" class="bm-dropdown">
+<button id="bm-location-button" class="bm-dropdown-btn" onclick="toggleBookmarkMenu('location')" type="button">📂 我的地點</button>
+<div id="bm-location-menu" class="bm-menu"></div>
+</div>
 <span class="bm-label">🛣️ 路徑:</span>
-<select id="bm-route-select" class="bm-select" data-placeholder="📂 我的路徑" onchange="onBookmarkRouteSelect(this.value)"><option value="">📂 我的路徑</option></select>
+<div id="bm-route-dropdown" class="bm-dropdown">
+<button id="bm-route-button" class="bm-dropdown-btn" onclick="toggleBookmarkMenu('route')" type="button">📂 我的路徑</button>
+<div id="bm-route-menu" class="bm-menu"></div>
+</div>
 <span class="bm-label">🌐 座標:</span>
 <input type="text" id="lat-input" class="coord-input" placeholder="緯度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
 <input type="text" id="lng-input" class="coord-input" placeholder="經度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
@@ -213,8 +230,12 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var statusElement = document.getElementById('status');
     var searchBox = document.getElementById('search-box');
     var searchResults = document.getElementById('search-results');
-    var bmLocationSelect = document.getElementById('bm-location-select');
-    var bmRouteSelect = document.getElementById('bm-route-select');
+    var bmLocationDropdown = document.getElementById('bm-location-dropdown');
+    var bmRouteDropdown = document.getElementById('bm-route-dropdown');
+    var bmLocationButton = document.getElementById('bm-location-button');
+    var bmRouteButton = document.getElementById('bm-route-button');
+    var bmLocationMenu = document.getElementById('bm-location-menu');
+    var bmRouteMenu = document.getElementById('bm-route-menu');
     var latInput = document.getElementById('lat-input');
     var lngInput = document.getElementById('lng-input');
 
@@ -228,11 +249,13 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             L.DomEvent.disableClickPropagation(searchResults);
             L.DomEvent.disableScrollPropagation(searchResults);
         }
-        if (bmLocationSelect) {
-            L.DomEvent.disableClickPropagation(bmLocationSelect);
+        if (bmLocationDropdown) {
+            L.DomEvent.disableClickPropagation(bmLocationDropdown);
+            L.DomEvent.disableScrollPropagation(bmLocationDropdown);
         }
-        if (bmRouteSelect) {
-            L.DomEvent.disableClickPropagation(bmRouteSelect);
+        if (bmRouteDropdown) {
+            L.DomEvent.disableClickPropagation(bmRouteDropdown);
+            L.DomEvent.disableScrollPropagation(bmRouteDropdown);
         }
         if (latInput) {
             L.DomEvent.disableClickPropagation(latInput);
@@ -1370,6 +1393,18 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         }, 300);
     })();
 
+    window.toggleBookmarkMenu = function(type) {
+        var dropdown = type === 'location' ? bmLocationDropdown : bmRouteDropdown;
+        var other = type === 'location' ? bmRouteDropdown : bmLocationDropdown;
+        if (other) other.classList.remove('open');
+        if (dropdown) dropdown.classList.toggle('open');
+    };
+
+    document.addEventListener('click', function(e) {
+        if (bmLocationDropdown && !bmLocationDropdown.contains(e.target)) bmLocationDropdown.classList.remove('open');
+        if (bmRouteDropdown && !bmRouteDropdown.contains(e.target)) bmRouteDropdown.classList.remove('open');
+    });
+
     window.onBookmarkLocationSelect = function(value) {
         if (!value) return;
         try {
@@ -1387,11 +1422,30 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             syncRouteToPython();
             sendToPython('auto_start', data.lat, data.lng);
             if (map) map.setView([data.lat, data.lng], 17, {animate: true, duration: 0.8});
-            if (bmLocationSelect) bmLocationSelect.value = '';
+            if (bmLocationButton) bmLocationButton.textContent = data.line || (data.lat.toFixed(6) + ', ' + data.lng.toFixed(6));
+            if (bmLocationDropdown) bmLocationDropdown.classList.remove('open');
         } catch(e) {
             console.error('[onBookmarkLocationSelect] error:', e);
         }
     };
+
+    function deleteBookmarkLocationItem(item) {
+        var data = item || {};
+        var detail = data.line || (data.lat.toFixed(6) + ', ' + data.lng.toFixed(6));
+        window.showConfirmModal('🗑️ 刪除地點', '確定要刪除此地點嗎？', detail, function(confirmed) {
+            if (!confirmed) return;
+            fetch('http://127.0.0.1:__PORT__/map_event', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'delete_bookmark_location', line: data.line})
+            }).then(function() {
+                if (bmLocationButton) bmLocationButton.textContent = '📂 我的地點';
+                if (bmLocationDropdown) bmLocationDropdown.classList.remove('open');
+                setTimeout(function() { pollBookmarks(true); }, 150);
+                updateStatus('🗑️ 已刪除地點', '#FF6961');
+            }).catch(function() {});
+        });
+    }
 
     window.onBookmarkRouteSelect = function(value) {
         if (!value) return;
@@ -1409,28 +1463,74 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 renderRoutePoints();
                 syncRouteToPython();
                 if (map) map.fitBounds(routePoints.map(function(p) { return [p.lat, p.lng]; }), {padding: [80, 80]});
+                if (bmRouteButton) bmRouteButton.textContent = data.label || data.description || '自訂路徑';
+                if (bmRouteDropdown) bmRouteDropdown.classList.remove('open');
             } else {
                 console.warn('[onBookmarkRouteSelect] pts.length < 2, not rendering');
             }
-            if (bmRouteSelect) bmRouteSelect.value = '';
         } catch(e) {
             console.error('[onBookmarkRouteSelect] error:', e);
         }
     };
 
-    function populateSelect(selectEl, items, valueFn, textFn) {
-        if (!selectEl) return;
-        // keep placeholder
-        selectEl.innerHTML = '<option value="">' + selectEl.getAttribute('data-placeholder') + '</option>';
-        items.forEach(function(item) {
-            var opt = document.createElement('option');
-            opt.value = valueFn(item);
-            opt.textContent = textFn(item);
-            selectEl.appendChild(opt);
+    function deleteBookmarkRouteItem(item) {
+        var data = item || {};
+        var detail = data.label || data.description || '自訂路徑';
+        window.showConfirmModal('🗑️ 刪除路徑', '確定要刪除此路徑嗎？', detail, function(confirmed) {
+            if (!confirmed) return;
+            fetch('http://127.0.0.1:__PORT__/map_event', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'delete_bookmark_route', index: data.index})
+            }).then(function() {
+                if (bmRouteButton) bmRouteButton.textContent = '📂 我的路徑';
+                if (bmRouteDropdown) bmRouteDropdown.classList.remove('open');
+                setTimeout(function() { pollBookmarks(true); }, 150);
+                updateStatus('🗑️ 已刪除路徑', '#FF6961');
+            }).catch(function() {});
         });
     }
 
-    function pollBookmarks() {
+    function renderBookmarkMenu(menuEl, items, emptyText, itemToData, textFn, selectFn, deleteFn) {
+        if (!menuEl) return;
+        menuEl.innerHTML = '';
+        if (!items.length) {
+            var empty = document.createElement('div');
+            empty.className = 'bm-empty';
+            empty.textContent = emptyText;
+            menuEl.appendChild(empty);
+            return;
+        }
+        items.forEach(function(item) {
+            var data = itemToData(item);
+            var row = document.createElement('div');
+            row.className = 'bm-item';
+
+            var text = document.createElement('div');
+            text.className = 'bm-item-text';
+            text.textContent = textFn(item);
+            text.title = text.textContent;
+            text.addEventListener('click', function() {
+                selectFn(JSON.stringify(data));
+            });
+
+            var del = document.createElement('button');
+            del.className = 'bm-item-delete';
+            del.type = 'button';
+            del.title = '刪除';
+            del.textContent = '🗑️';
+            del.addEventListener('click', function(e) {
+                e.stopPropagation();
+                deleteFn(data);
+            });
+
+            row.appendChild(text);
+            row.appendChild(del);
+            menuEl.appendChild(row);
+        });
+    }
+
+    function pollBookmarks(refreshNow) {
         if (!mapInitialized || !map) {
             setTimeout(pollBookmarks, 2000);
             return;
@@ -1440,11 +1540,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var items = d.items || [];
-                populateSelect(
-                    bmLocationSelect,
+                renderBookmarkMenu(
+                    bmLocationMenu,
                     items,
-                    function(item) { return JSON.stringify({lat: item.lat, lng: item.lng}); },
-                    function(item) { return item.line || (item.lat.toFixed(6) + ', ' + item.lng.toFixed(6)); }
+                    '(無收藏地點)',
+                    function(item) { return {line: item.line, lat: item.lat, lng: item.lng}; },
+                    function(item) { return item.line || (item.lat.toFixed(6) + ', ' + item.lng.toFixed(6)); },
+                    window.onBookmarkLocationSelect,
+                    deleteBookmarkLocationItem
                 );
             }).catch(function() {});
         // poll routes
@@ -1452,19 +1555,27 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var items = d.items || [];
-                populateSelect(
-                    bmRouteSelect,
+                renderBookmarkMenu(
+                    bmRouteMenu,
                     items,
-                    function(item) { return JSON.stringify({points: item.points || []}); },
+                    '(無收藏路徑)',
+                    function(item) {
+                        var desc = item.description || '自訂路徑';
+                        var n = (item.points || []).length;
+                        var label = (item.timestamp ? '[' + item.timestamp + '] ' : '') + desc + ' (' + n + '點)';
+                        return {index: item.index, description: desc, label: label, points: item.points || []};
+                    },
                     function(item) {
                         var desc = item.description || '自訂路徑';
                         var n = (item.points || []).length;
                         return (item.timestamp ? '[' + item.timestamp + '] ' : '') + desc + ' (' + n + '點)';
-                    }
+                    },
+                    window.onBookmarkRouteSelect,
+                    deleteBookmarkRouteItem
                 );
             }).catch(function() {});
         // re-poll every 5 seconds to stay in sync
-        setTimeout(pollBookmarks, 5000);
+        if (!refreshNow) setTimeout(pollBookmarks, 5000);
     }
 
     function syncRouteToPython() {

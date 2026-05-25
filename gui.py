@@ -730,6 +730,10 @@ class SimulatorGUI:
             self.root.after(0, lambda: self._bookmark_location(lat=data.get('lat'), lng=data.get('lng'), description=data.get('description')))
         elif action == 'bookmark_route':
             self.root.after(0, lambda: self._bookmark_route(description=data.get('description')))
+        elif action == 'delete_bookmark_location':
+            self.root.after(0, lambda: self._delete_bookmark_confirmed(data.get('line')))
+        elif action == 'delete_bookmark_route':
+            self.root.after(0, lambda: self._delete_route_confirmed(data.get('index')))
         elif action == 'toggle_pause':
             self.root.after(0, self._pause_simulation)
         else:
@@ -928,7 +932,13 @@ class SimulatorGUI:
 
         if not self._show_confirm_dialog("刪除地點", "確定要刪除此地點嗎？", selection, parent=self.root):
             return
-            
+
+        self._delete_bookmark_confirmed(selection)
+
+    def _delete_bookmark_confirmed(self, selection=None):
+        if not selection:
+            return
+
         bookmark_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bookmarks.txt")
         try:
             with open(bookmark_file_path, "r", encoding="utf-8") as f: lines = f.readlines()
@@ -939,6 +949,26 @@ class SimulatorGUI:
             self.bookmark_combo.set("📂 我的地點")
         except Exception as e:
             self._log(f"❌ 刪除地點失敗: {e}", color="red")
+
+    def _delete_route_confirmed(self, route_index=None):
+        try:
+            route_index = int(route_index)
+        except (TypeError, ValueError):
+            return
+
+        self._load_routes()
+        if route_index < 0 or route_index >= len(self.saved_routes):
+            return
+
+        desc = self.saved_routes[route_index].get('description', '自訂路徑')
+        del self.saved_routes[route_index]
+        routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
+        try:
+            with open(routes_file, 'w', encoding='utf-8') as f:
+                json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
+            self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
+        except Exception as e:
+            self._log(f"❌ 刪除路徑失敗: {e}", color="red")
 
     def _bookmark_route(self, event=None, description=None):
         points = self.core.get_route_points_snapshot()
@@ -1025,16 +1055,10 @@ class SimulatorGUI:
             desc = self.saved_routes[actual_idx].get('description', '自訂路徑')
             if not self._show_confirm_dialog("刪除路徑", "確定要刪除此路徑嗎？", desc, parent=manager_win):
                 return
-            del self.saved_routes[actual_idx]
-            routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
-            try:
-                with open(routes_file, 'w', encoding='utf-8') as f:
-                    json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
-                self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
-                listbox.delete(idx[0])
-                if not self.saved_routes: manager_win.destroy()
-            except Exception as e:
-                self._log(f"❌ 刪除路徑失敗: {e}", color="red")
+            self._delete_route_confirmed(actual_idx)
+            listbox.delete(idx[0])
+            if not self.saved_routes:
+                manager_win.destroy()
 
         def on_rename():
             idx = listbox.curselection()

@@ -123,6 +123,9 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                 with open(routes_file, "r", encoding="utf-8") as f:
                     routes = json.load(f)
             except Exception: pass
+        for idx, route in enumerate(routes):
+            if isinstance(route, dict):
+                route["index"] = idx
         routes.reverse()
         return {"items": routes}
 
