@@ -128,6 +128,50 @@ class SimulatorGUI:
         if P == "": return True
         return P.isdigit() and len(P) <= 5
 
+    def _show_confirm_dialog(self, title, message, detail="", parent=None, confirm_text="確定刪除"):
+        parent = parent or self.root
+        dialog = tk.Toplevel(parent)
+        dialog.title(title)
+        dialog.transient(parent)
+        dialog.grab_set()
+        dialog.configure(bg="#FFF0F5")
+        dialog.resizable(False, False)
+
+        result = [False]
+
+        container = ttk.Frame(dialog, padding=18)
+        container.pack(fill='both', expand=True)
+
+        ttk.Label(container, text="🗑️", font=('Arial', 24)).pack(pady=(0, 6))
+        ttk.Label(container, text=message, font=('Microsoft JhengHei', 12, 'bold'),
+                  foreground="#5D4037", justify='center').pack()
+        if detail:
+            detail_label = ttk.Label(container, text=detail, justify='center', wraplength=360,
+                                     foreground="#7A5C58")
+            detail_label.pack(fill='x', pady=(10, 0))
+
+        btn_frame = ttk.Frame(container)
+        btn_frame.pack(fill='x', pady=(18, 0))
+
+        def close(value):
+            result[0] = value
+            dialog.destroy()
+
+        ttk.Button(btn_frame, text="取消", command=lambda: close(False)).pack(side='left', expand=True, fill='x', padx=(0, 6))
+        ttk.Button(btn_frame, text=confirm_text, command=lambda: close(True)).pack(side='left', expand=True, fill='x', padx=(6, 0))
+
+        dialog.bind('<Escape>', lambda _event: close(False))
+        dialog.bind('<Return>', lambda _event: close(True))
+        dialog.protocol("WM_DELETE_WINDOW", lambda: close(False))
+
+        dialog.update_idletasks()
+        x = parent.winfo_rootx() + (parent.winfo_width() - dialog.winfo_width()) // 2
+        y = parent.winfo_rooty() + (parent.winfo_height() - dialog.winfo_height()) // 2
+        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        dialog.focus_set()
+        self.root.wait_window(dialog)
+        return result[0]
+
     def _build_ui(self):
         self.root.configure(bg="#FFF0F5")
         self._apply_cute_theme()
@@ -881,6 +925,9 @@ class SimulatorGUI:
         if not selection or selection in ["(無收藏紀錄)", "📂 我的地點"]:
             messagebox.showwarning("刪除失敗", "請先從下拉選單選擇要刪除的地點！")
             return
+
+        if not self._show_confirm_dialog("刪除地點", "確定要刪除此地點嗎？", selection, parent=self.root):
+            return
             
         bookmark_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bookmarks.txt")
         try:
@@ -976,17 +1023,18 @@ class SimulatorGUI:
                 return
             actual_idx = len(self.saved_routes) - 1 - idx[0]
             desc = self.saved_routes[actual_idx].get('description', '自訂路徑')
-            if messagebox.askyesno("刪除確認", f"確定要刪除此路徑嗎？\n\n{desc}", parent=manager_win):
-                del self.saved_routes[actual_idx]
-                routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
-                try:
-                    with open(routes_file, 'w', encoding='utf-8') as f:
-                        json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
-                    self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
-                    listbox.delete(idx[0])
-                    if not self.saved_routes: manager_win.destroy()
-                except Exception as e:
-                    self._log(f"❌ 刪除路徑失敗: {e}", color="red")
+            if not self._show_confirm_dialog("刪除路徑", "確定要刪除此路徑嗎？", desc, parent=manager_win):
+                return
+            del self.saved_routes[actual_idx]
+            routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
+            try:
+                with open(routes_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
+                self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
+                listbox.delete(idx[0])
+                if not self.saved_routes: manager_win.destroy()
+            except Exception as e:
+                self._log(f"❌ 刪除路徑失敗: {e}", color="red")
 
         def on_rename():
             idx = listbox.curselection()

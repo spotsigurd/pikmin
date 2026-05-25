@@ -67,6 +67,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 @keyframes slideDown{from{transform:translateY(-40px);opacity:0}to{transform:translateY(0);opacity:1}}
 #input-modal-box{background:linear-gradient(135deg,#FFF0F5 0%,#FFFFFF 100%);border:2px solid #FFB6C1;border-radius:16px;padding:24px 28px;min-width:340px;max-width:420px;box-shadow:0 12px 40px rgba(255,107,129,.25),0 4px 16px rgba(0,0,0,.15);animation:slideDown .3s ease-out}
 #input-modal-title{font-size:17px;font-weight:700;color:#5D4037;margin-bottom:16px;text-align:center}
+#input-modal-message{font-size:14px;line-height:1.6;color:#5D4037;text-align:center;white-space:pre-wrap;word-break:break-word;background:#FFFFFF;border:1px solid #FFD1DC;border-radius:12px;padding:12px 14px}
 #input-modal-input{width:100%;padding:12px 15px;font-size:14px;border:2px solid #FFD1DC;border-radius:12px;background:#FFFFFF;color:#5D4037;outline:0;box-sizing:border-box;transition:border-color .2s}
 #input-modal-input:focus{border-color:#FF6B81}
 #input-modal-buttons{display:flex;gap:12px;margin-top:18px;justify-content:center}
@@ -75,6 +76,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 #input-modal-cancel:hover{background:#E8E8E8;color:#666}
 #input-modal-confirm{background:linear-gradient(135deg,#FF6B81,#FF8E9E);color:#FFF;box-shadow:0 4px 12px rgba(255,107,129,.4)}
 #input-modal-confirm:hover{background:linear-gradient(135deg,#FF8E9E,#FF6B81);box-shadow:0 6px 16px rgba(255,107,129,.5);transform:translateY(-1px)}
+#input-modal-confirm.danger{background:linear-gradient(135deg,#FF6961,#D1495B);box-shadow:0 4px 12px rgba(209,73,91,.35)}
+#input-modal-confirm.danger:hover{background:linear-gradient(135deg,#D1495B,#FF6961);box-shadow:0 6px 16px rgba(209,73,91,.45)}
 </style>
 </head>
 <body>
@@ -1129,8 +1132,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         if (map) map.closePopup();
         window._suppressPopup = true;
         setTimeout(function() { window._suppressPopup = false; }, 300);
-        
-        removeRoutePoint(index);
+
+        var point = routePoints[index];
+        var detail = point
+            ? '節點 ' + (index + 1) + '\n' + point.lat.toFixed(6) + ', ' + point.lng.toFixed(6)
+            : '';
+        window.showConfirmModal('🗑️ 刪除路徑點', '確定要刪除此路徑點嗎？', detail, function(confirmed) {
+            if (confirmed) removeRoutePoint(index);
+        });
     };
 
     // ── 自定義輸入模態框（取代原生 prompt）──
@@ -1200,6 +1209,72 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 
         // 自動聚焦輸入框
         setTimeout(function() { input.focus(); input.select(); }, 100);
+    };
+
+    // ── 自定義確認模態框（取代原生 confirm）──
+    window.showConfirmModal = function(title, message, detail, callback) {
+        var oldOverlay = document.getElementById('input-modal-overlay');
+        if (oldOverlay) oldOverlay.parentNode.removeChild(oldOverlay);
+
+        var overlay = document.createElement('div');
+        overlay.id = 'input-modal-overlay';
+
+        var box = document.createElement('div');
+        box.id = 'input-modal-box';
+
+        var titleEl = document.createElement('div');
+        titleEl.id = 'input-modal-title';
+        titleEl.textContent = title;
+
+        var messageEl = document.createElement('div');
+        messageEl.id = 'input-modal-message';
+        messageEl.textContent = detail ? message + '\n\n' + detail : message;
+
+        var btnRow = document.createElement('div');
+        btnRow.id = 'input-modal-buttons';
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.id = 'input-modal-cancel';
+        cancelBtn.textContent = '取消';
+
+        var confirmBtn = document.createElement('button');
+        confirmBtn.id = 'input-modal-confirm';
+        confirmBtn.className = 'danger';
+        confirmBtn.textContent = '確定刪除';
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(confirmBtn);
+        box.appendChild(titleEl);
+        box.appendChild(messageEl);
+        box.appendChild(btnRow);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function onKeydown(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeModal(false);
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                closeModal(true);
+            }
+        }
+
+        function closeModal(value) {
+            document.removeEventListener('keydown', onKeydown);
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (typeof callback === 'function') callback(value);
+        }
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeModal(false);
+        });
+        cancelBtn.addEventListener('click', function() { closeModal(false); });
+        confirmBtn.addEventListener('click', function() { closeModal(true); });
+        document.addEventListener('keydown', onKeydown);
+
+        setTimeout(function() { confirmBtn.focus(); }, 100);
     };
 
     window.bookmarkNode = function(lat, lng) {
