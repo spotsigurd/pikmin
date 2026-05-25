@@ -38,6 +38,7 @@ class SimulatorGUI:
         
         # 狀態控制變數
         self.tunneld_proc = None
+        self._tunneld_generation = 0
         self._browser_proc = None
         self._is_auto_connecting = False
         self._auto_retry_count = 0
@@ -397,10 +398,22 @@ class SimulatorGUI:
     # ==========================================
     # 自動連線與底層控制
     # ==========================================
+    def _clear_rsd(self):
+        def _apply():
+            self.rsd_host.set("")
+            self.rsd_port.set("")
+            self.btn_start.config(state="disabled")
+        if threading.current_thread() is threading.main_thread():
+            _apply()
+        else:
+            self.root.after(0, _apply)
+        self.core._conn_status = "disconnected"
+
     def _auto_connect(self):
         self._is_auto_connecting = True
+        self._clear_rsd()
         self._log("⚡ 開始自動連線流程 (等待 tunneld 就緒...)", color="blue")
-        self._start_tunneld()
+        self._start_tunneld(force_restart=True)
         self._wait_for_tunneld_ready()
 
     def _wait_for_tunneld_ready(self, wait_time=0):
@@ -451,23 +464,30 @@ class SimulatorGUI:
         except Exception as e:
             self._log(f"⚠ 清除舊程序: {e}")
 
-    def _start_tunneld(self):
+    def _start_tunneld(self, force_restart=False):
+        if force_restart:
+            self._stop_tunneld_process()
         if self.tunneld_proc and self.tunneld_proc.poll() is None:
             self._log("⚠ tunneld 已在執行")
             return 
         self._log("🚀 啟動 tunneld...", color="blue")
         self.lbl_tunneld.config(text="啟動中...", foreground="orange")
         self._kill_old_tunneld()
+        self._tunneld_generation += 1
+        generation = self._tunneld_generation
 
         def _read_output():
             try:
-                self.tunneld_proc = subprocess.Popen(
+                proc = subprocess.Popen(
                     [sys.executable, "-m", "pymobiledevice3", "remote", "tunneld"],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=subprocess.CREATE_NO_WINDOW
                 )
+                self.tunneld_proc = proc
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="✅ 執行中", foreground="green"))
                 self._log("✅ tunneld 已啟動", color="green")
-                for line in self.tunneld_proc.stdout:
+                for line in proc.stdout:
+                    if generation != self._tunneld_generation:
+                        break
                     line = line.strip()
                     if not line: continue
                     line_lower = line.lower()
@@ -478,16 +498,18 @@ class SimulatorGUI:
                         m2h = re.search(r'address[:\s]+([\da-fA-F:]+)', line)
                         m2p = re.search(r'port[:\s]+(\d{4,5})', line)
                         if m2h and m2p:
-                            self._set_rsd(m2h.group(1).strip(), m2p.group(1).strip())
+                            self._set_rsd(m2h.group(1).strip(), m2p.group(1).strip(), generation=generation)
                             continue
-                    if m: self._set_rsd(m.group(1), m.group(2))
+                    if m: self._set_rsd(m.group(1), m.group(2), generation=generation)
             except Exception as e:
                 self._log(f"❌ tunneld 錯誤: {e}", color="red")
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
 
         threading.Thread(target=_read_output, daemon=True).start()
 
-    def _set_rsd(self, host, port):
+    def _set_rsd(self, host, port, generation=None):
+        if generation is not None and generation != self._tunneld_generation:
+            return
         self.root.after(0, lambda: self.rsd_host.set(host))
         self.root.after(0, lambda: self.rsd_port.set(port))
         self.root.after(0, lambda: self.btn_start.config(state="normal")) 
@@ -568,10 +590,20 @@ class SimulatorGUI:
         else: threading.Thread(target=_run, daemon=True).start()
 
     def _stop_tunneld_process(self):
+        self._tunneld_generation += 1
         if self.tunneld_proc and self.tunneld_proc.poll() is None:
             self._log("🔪 終止 tunneld 進程...", color="red")
-            self.tunneld_proc.terminate()
+            try:
+                self.tunneld_proc.terminate()
+                self.tunneld_proc.wait(timeout=3)
+            except Exception:
+                try:
+                    self.tunneld_proc.kill()
+                except Exception:
+                    pass
             self.tunneld_proc = None
+        self._kill_old_tunneld()
+        self._clear_rsd()
         self.root.after(0, lambda: self.lbl_tunneld.config(text="已停止", foreground="#555555"))
         self.core._conn_status = "disconnected"
 
