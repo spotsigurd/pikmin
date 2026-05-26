@@ -654,6 +654,10 @@ class SimulatorGUI:
             self.root.after(0, lambda: self._bookmark_location(lat=data.get('lat'), lng=data.get('lng'), description=data.get('description')))
         elif action == 'bookmark_route':
             self.root.after(0, lambda: self._bookmark_route(description=data.get('description')))
+        elif action == 'delete_bookmark':
+            self.root.after(0, lambda: self._delete_bookmark(data.get('line')))
+        elif action == 'delete_route':
+            self.root.after(0, lambda: self._delete_route_from_map(data))
         elif action == 'toggle_pause':
             self.root.after(0, self._pause_simulation)
         else:
@@ -860,6 +864,37 @@ class SimulatorGUI:
             self.bookmark_combo.set("📂 我的地點")
         except Exception as e:
             self._log(f"❌ 刪除地點失敗: {e}", color="red")
+
+    def _delete_route_from_map(self, data):
+        routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
+        try:
+            self._load_routes()
+            if not self.saved_routes:
+                return
+
+            index = data.get('index')
+            target_idx = None
+            if isinstance(index, int) and 0 <= index < len(self.saved_routes):
+                target_idx = index
+            else:
+                timestamp = data.get('timestamp', '')
+                description = data.get('description', '')
+                for i, route in enumerate(self.saved_routes):
+                    if route.get('timestamp', '') == timestamp and route.get('description', '自訂路徑') == description:
+                        target_idx = i
+                        break
+
+            if target_idx is None:
+                self._log("❌ 刪除路徑失敗: 找不到指定路徑", color="red")
+                return
+
+            desc = self.saved_routes[target_idx].get('description', '自訂路徑')
+            del self.saved_routes[target_idx]
+            with open(routes_file, 'w', encoding='utf-8') as f:
+                json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
+            self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
+        except Exception as e:
+            self._log(f"❌ 刪除路徑失敗: {e}", color="red")
 
     def _bookmark_route(self, event=None, description=None):
         points = self.core.get_route_points_snapshot()

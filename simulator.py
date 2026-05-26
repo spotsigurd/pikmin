@@ -123,8 +123,13 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                 with open(routes_file, "r", encoding="utf-8") as f:
                     routes = json.load(f)
             except Exception: pass
-        routes.reverse()
-        return {"items": routes}
+        items = []
+        for original_index, route in reversed(list(enumerate(routes))):
+            if isinstance(route, dict):
+                item = dict(route)
+                item["original_index"] = original_index
+                items.append(item)
+        return {"items": items}
 
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
