@@ -123,13 +123,11 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                 with open(routes_file, "r", encoding="utf-8") as f:
                     routes = json.load(f)
             except Exception: pass
-        items = []
-        for original_index, route in reversed(list(enumerate(routes))):
+        for idx, route in enumerate(routes):
             if isinstance(route, dict):
-                item = dict(route)
-                item["original_index"] = original_index
-                items.append(item)
-        return {"items": items}
+                route["index"] = idx
+        routes.reverse()
+        return {"items": routes}
 
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
@@ -518,4 +516,47 @@ class SimulatorCore:
     async def _refresh_rsd_async(self, reason):
         # 由於涉及隧道邏輯，這部分若長度不足需依賴 gui 內的 _refresh_rsd_async 實作
         # 在完整版中應實作 PyMobileDevice3 的重連策略
-        pass
+        self.log(f"RSD refresh: {reason}", color="orange")
+
+        def _run_on_gui_thread(callback, timeout=5):
+            if not self.gui:
+                raise RuntimeError("GUI is not available")
+            done = threading.Event()
+            box = {}
+
+            def _wrapped():
+                try:
+                    box["value"] = callback()
+                except Exception as exc:
+                    box["error"] = exc
+                finally:
+                    done.set()
+
+            self.gui.root.after(0, _wrapped)
+            if not done.wait(timeout):
+                raise TimeoutError("GUI refresh step timed out")
+            if "error" in box:
+                raise box["error"]
+            return box.get("value")
+
+        def _get_gui_rsd():
+            return _run_on_gui_thread(lambda: (self.gui.rsd_host.get(), self.gui.rsd_port.get()), timeout=2)
+
+        def _refresh_sync():
+            if not self.gui:
+                raise RuntimeError("GUI is not available")
+
+            _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
+            _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
+
+            deadline = time.time() + 25
+            while time.time() < deadline:
+                host, port = _get_gui_rsd()
+                if host and port:
+                    return host, int(port)
+                time.sleep(0.5)
+
+            host, port = self.gui._detect_rsd_sync(timeout=20)
+            return host, int(port)
+
+        return await asyncio.to_thread(_refresh_sync)

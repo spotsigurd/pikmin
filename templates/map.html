@@ -57,20 +57,18 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 .result-type{font-size:11px;color:#999;margin-top:4px;font-style:italic}
 .bm-row{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .ctrl-row{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
-.bm-select{flex:1;padding:6px 10px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0;max-width:280px}
-.bm-dropdown{position:relative;flex:1;max-width:280px;min-width:180px}
-.bm-dropdown-toggle{width:100%;height:30px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;margin:0;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;font-size:12px;font-weight:700;text-align:left}
-.bm-dropdown-toggle:hover{background:#FFF0F5}
-.bm-dropdown-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bm-dropdown-menu{display:none;position:absolute;top:34px;left:0;right:0;max-height:260px;overflow-y:auto;background:#FFFFFF;border:2px solid #FFB6C1;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.18);z-index:5200;padding:4px}
-.bm-dropdown.open .bm-dropdown-menu{display:block}
-.bm-option{display:flex;align-items:stretch;gap:4px;border-bottom:1px solid #FFE3EA}
-.bm-option:last-child{border-bottom:0}
-.bm-option-main{flex:1;min-width:0;margin:0;padding:7px 8px;border:0;border-radius:4px;background:#FFFFFF;color:#5D4037;text-align:left;font-size:12px;font-weight:700;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
-.bm-option-main:hover{background:#FFF0F5}
-.bm-option-delete{width:32px;min-width:32px;margin:3px 0;padding:0;border:1px solid #FFB6C1;border-radius:4px;background:#FFFFFF;color:#C62828;font-size:14px;display:flex;align-items:center;justify-content:center}
-.bm-option-delete:hover{background:#FFE3EA;border-color:#FF6961}
-.bm-empty{padding:8px;color:#9A7A72;font-size:12px;text-align:center}
+.bm-dropdown{position:relative;flex:1;max-width:280px;min-width:190px}
+.bm-dropdown-btn{width:100%;height:30px;padding:5px 28px 5px 10px;margin:0;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;font-size:12px;font-weight:700;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.bm-dropdown-btn:after{content:'▾';position:absolute;right:10px;top:5px;color:#FF6B81}
+.bm-menu{display:none;position:absolute;top:34px;left:0;right:0;max-height:260px;overflow-y:auto;background:#FFFFFF;border:2px solid #FFB6C1;border-radius:8px;box-shadow:0 8px 22px rgba(0,0,0,.16);z-index:7000}
+.bm-dropdown.open .bm-menu{display:block}
+.bm-item{display:flex;align-items:center;gap:6px;border-bottom:1px solid #FFE3E8}
+.bm-item:last-child{border-bottom:none}
+.bm-item-text{flex:1;min-width:0;padding:8px 6px 8px 10px;color:#5D4037;font-size:12px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.bm-item-text:hover{background:#FFF0F5}
+.bm-item-delete{width:30px;height:30px;flex:0 0 30px;padding:0;margin:3px 4px 3px 0;border-radius:6px;background:#FFFFFF;color:#D1495B;border:1px solid #FFB6C1;font-size:13px;line-height:1}
+.bm-item-delete:hover{background:#FFE3E8;border-color:#FF6961}
+.bm-empty{padding:8px 10px;color:#999;font-size:12px}
 .bm-label{font-size:11px;font-weight:700;color:#5D4037;white-space:nowrap}
 .coord-input-row{display:flex;gap:6px;margin-top:4px;align-items:center}
 .coord-input{width:100px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
@@ -80,6 +78,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 @keyframes slideDown{from{transform:translateY(-40px);opacity:0}to{transform:translateY(0);opacity:1}}
 #input-modal-box{background:linear-gradient(135deg,#FFF0F5 0%,#FFFFFF 100%);border:2px solid #FFB6C1;border-radius:16px;padding:24px 28px;min-width:340px;max-width:420px;box-shadow:0 12px 40px rgba(255,107,129,.25),0 4px 16px rgba(0,0,0,.15);animation:slideDown .3s ease-out}
 #input-modal-title{font-size:17px;font-weight:700;color:#5D4037;margin-bottom:16px;text-align:center}
+#input-modal-message{font-size:14px;line-height:1.6;color:#5D4037;text-align:center;white-space:pre-wrap;word-break:break-word;background:#FFFFFF;border:1px solid #FFD1DC;border-radius:12px;padding:12px 14px}
 #input-modal-input{width:100%;padding:12px 15px;font-size:14px;border:2px solid #FFD1DC;border-radius:12px;background:#FFFFFF;color:#5D4037;outline:0;box-sizing:border-box;transition:border-color .2s}
 #input-modal-input:focus{border-color:#FF6B81}
 #input-modal-buttons{display:flex;gap:12px;margin-top:18px;justify-content:center}
@@ -88,6 +87,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 #input-modal-cancel:hover{background:#E8E8E8;color:#666}
 #input-modal-confirm{background:linear-gradient(135deg,#FF6B81,#FF8E9E);color:#FFF;box-shadow:0 4px 12px rgba(255,107,129,.4)}
 #input-modal-confirm:hover{background:linear-gradient(135deg,#FF8E9E,#FF6B81);box-shadow:0 6px 16px rgba(255,107,129,.5);transform:translateY(-1px)}
+#input-modal-confirm.danger{background:linear-gradient(135deg,#FF6961,#D1495B);box-shadow:0 4px 12px rgba(209,73,91,.35)}
+#input-modal-confirm.danger:hover{background:linear-gradient(135deg,#D1495B,#FF6961);box-shadow:0 6px 16px rgba(209,73,91,.45)}
 </style>
 </head>
 <body>
@@ -117,14 +118,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 </div>
 <div class="bm-row">
 <span class="bm-label">🔖 地點:</span>
-<div id="bm-location-select" class="bm-dropdown" data-placeholder="我的地點">
-<button type="button" class="bm-dropdown-toggle"><span class="bm-dropdown-text">我的地點</span><span>▾</span></button>
-<div class="bm-dropdown-menu"></div>
+<div id="bm-location-dropdown" class="bm-dropdown">
+<button id="bm-location-button" class="bm-dropdown-btn" onclick="toggleBookmarkMenu('location')" type="button">📂 我的地點</button>
+<div id="bm-location-menu" class="bm-menu"></div>
 </div>
 <span class="bm-label">🛣️ 路徑:</span>
-<div id="bm-route-select" class="bm-dropdown" data-placeholder="我的路徑">
-<button type="button" class="bm-dropdown-toggle"><span class="bm-dropdown-text">我的路徑</span><span>▾</span></button>
-<div class="bm-dropdown-menu"></div>
+<div id="bm-route-dropdown" class="bm-dropdown">
+<button id="bm-route-button" class="bm-dropdown-btn" onclick="toggleBookmarkMenu('route')" type="button">📂 我的路徑</button>
+<div id="bm-route-menu" class="bm-menu"></div>
 </div>
 <span class="bm-label">🌐 座標:</span>
 <input type="text" id="lat-input" class="coord-input" placeholder="緯度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
@@ -229,8 +230,12 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var statusElement = document.getElementById('status');
     var searchBox = document.getElementById('search-box');
     var searchResults = document.getElementById('search-results');
-    var bmLocationSelect = document.getElementById('bm-location-select');
-    var bmRouteSelect = document.getElementById('bm-route-select');
+    var bmLocationDropdown = document.getElementById('bm-location-dropdown');
+    var bmRouteDropdown = document.getElementById('bm-route-dropdown');
+    var bmLocationButton = document.getElementById('bm-location-button');
+    var bmRouteButton = document.getElementById('bm-route-button');
+    var bmLocationMenu = document.getElementById('bm-location-menu');
+    var bmRouteMenu = document.getElementById('bm-route-menu');
     var latInput = document.getElementById('lat-input');
     var lngInput = document.getElementById('lng-input');
 
@@ -244,11 +249,13 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             L.DomEvent.disableClickPropagation(searchResults);
             L.DomEvent.disableScrollPropagation(searchResults);
         }
-        if (bmLocationSelect) {
-            L.DomEvent.disableClickPropagation(bmLocationSelect);
+        if (bmLocationDropdown) {
+            L.DomEvent.disableClickPropagation(bmLocationDropdown);
+            L.DomEvent.disableScrollPropagation(bmLocationDropdown);
         }
-        if (bmRouteSelect) {
-            L.DomEvent.disableClickPropagation(bmRouteSelect);
+        if (bmRouteDropdown) {
+            L.DomEvent.disableClickPropagation(bmRouteDropdown);
+            L.DomEvent.disableScrollPropagation(bmRouteDropdown);
         }
         if (latInput) {
             L.DomEvent.disableClickPropagation(latInput);
@@ -1148,8 +1155,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         if (map) map.closePopup();
         window._suppressPopup = true;
         setTimeout(function() { window._suppressPopup = false; }, 300);
-        
-        removeRoutePoint(index);
+
+        var point = routePoints[index];
+        var detail = point
+            ? '節點 ' + (index + 1) + '\n' + point.lat.toFixed(6) + ', ' + point.lng.toFixed(6)
+            : '';
+        window.showConfirmModal('🗑️ 刪除路徑點', '確定要刪除此路徑點嗎？', detail, function(confirmed) {
+            if (confirmed) removeRoutePoint(index);
+        });
     };
 
     // ── 自定義輸入模態框（取代原生 prompt）──
@@ -1219,6 +1232,72 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 
         // 自動聚焦輸入框
         setTimeout(function() { input.focus(); input.select(); }, 100);
+    };
+
+    // ── 自定義確認模態框（取代原生 confirm）──
+    window.showConfirmModal = function(title, message, detail, callback) {
+        var oldOverlay = document.getElementById('input-modal-overlay');
+        if (oldOverlay) oldOverlay.parentNode.removeChild(oldOverlay);
+
+        var overlay = document.createElement('div');
+        overlay.id = 'input-modal-overlay';
+
+        var box = document.createElement('div');
+        box.id = 'input-modal-box';
+
+        var titleEl = document.createElement('div');
+        titleEl.id = 'input-modal-title';
+        titleEl.textContent = title;
+
+        var messageEl = document.createElement('div');
+        messageEl.id = 'input-modal-message';
+        messageEl.textContent = detail ? message + '\n\n' + detail : message;
+
+        var btnRow = document.createElement('div');
+        btnRow.id = 'input-modal-buttons';
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.id = 'input-modal-cancel';
+        cancelBtn.textContent = '取消';
+
+        var confirmBtn = document.createElement('button');
+        confirmBtn.id = 'input-modal-confirm';
+        confirmBtn.className = 'danger';
+        confirmBtn.textContent = '確定刪除';
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(confirmBtn);
+        box.appendChild(titleEl);
+        box.appendChild(messageEl);
+        box.appendChild(btnRow);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function onKeydown(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeModal(false);
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                closeModal(true);
+            }
+        }
+
+        function closeModal(value) {
+            document.removeEventListener('keydown', onKeydown);
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (typeof callback === 'function') callback(value);
+        }
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeModal(false);
+        });
+        cancelBtn.addEventListener('click', function() { closeModal(false); });
+        confirmBtn.addEventListener('click', function() { closeModal(true); });
+        document.addEventListener('keydown', onKeydown);
+
+        setTimeout(function() { confirmBtn.focus(); }, 100);
     };
 
     window.bookmarkNode = function(lat, lng) {
@@ -1314,6 +1393,18 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         }, 300);
     })();
 
+    window.toggleBookmarkMenu = function(type) {
+        var dropdown = type === 'location' ? bmLocationDropdown : bmRouteDropdown;
+        var other = type === 'location' ? bmRouteDropdown : bmLocationDropdown;
+        if (other) other.classList.remove('open');
+        if (dropdown) dropdown.classList.toggle('open');
+    };
+
+    document.addEventListener('click', function(e) {
+        if (bmLocationDropdown && !bmLocationDropdown.contains(e.target)) bmLocationDropdown.classList.remove('open');
+        if (bmRouteDropdown && !bmRouteDropdown.contains(e.target)) bmRouteDropdown.classList.remove('open');
+    });
+
     window.onBookmarkLocationSelect = function(value) {
         if (!value) return;
         try {
@@ -1331,11 +1422,30 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             syncRouteToPython();
             sendToPython('auto_start', data.lat, data.lng);
             if (map) map.setView([data.lat, data.lng], 17, {animate: true, duration: 0.8});
-            closeBookmarkDropdowns();
+            if (bmLocationButton) bmLocationButton.textContent = data.line || (data.lat.toFixed(6) + ', ' + data.lng.toFixed(6));
+            if (bmLocationDropdown) bmLocationDropdown.classList.remove('open');
         } catch(e) {
             console.error('[onBookmarkLocationSelect] error:', e);
         }
     };
+
+    function deleteBookmarkLocationItem(item) {
+        var data = item || {};
+        var detail = data.line || (data.lat.toFixed(6) + ', ' + data.lng.toFixed(6));
+        window.showConfirmModal('🗑️ 刪除地點', '確定要刪除此地點嗎？', detail, function(confirmed) {
+            if (!confirmed) return;
+            fetch('http://127.0.0.1:__PORT__/map_event', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'delete_bookmark_location', line: data.line})
+            }).then(function() {
+                if (bmLocationButton) bmLocationButton.textContent = '📂 我的地點';
+                if (bmLocationDropdown) bmLocationDropdown.classList.remove('open');
+                setTimeout(function() { pollBookmarks(true); }, 150);
+                updateStatus('🗑️ 已刪除地點', '#FF6961');
+            }).catch(function() {});
+        });
+    }
 
     window.onBookmarkRouteSelect = function(value) {
         if (!value) return;
@@ -1353,91 +1463,76 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 renderRoutePoints();
                 syncRouteToPython();
                 if (map) map.fitBounds(routePoints.map(function(p) { return [p.lat, p.lng]; }), {padding: [80, 80]});
+                if (bmRouteButton) bmRouteButton.textContent = data.label || data.description || '自訂路徑';
+                if (bmRouteDropdown) bmRouteDropdown.classList.remove('open');
             } else {
                 console.warn('[onBookmarkRouteSelect] pts.length < 2, not rendering');
             }
-            closeBookmarkDropdowns();
         } catch(e) {
             console.error('[onBookmarkRouteSelect] error:', e);
         }
     };
 
-    function closeBookmarkDropdowns(exceptEl) {
-        [bmLocationSelect, bmRouteSelect].forEach(function(el) {
-            if (el && el !== exceptEl) el.classList.remove('open');
+    function deleteBookmarkRouteItem(item) {
+        var data = item || {};
+        var detail = data.label || data.description || '自訂路徑';
+        window.showConfirmModal('🗑️ 刪除路徑', '確定要刪除此路徑嗎？', detail, function(confirmed) {
+            if (!confirmed) return;
+            fetch('http://127.0.0.1:__PORT__/map_event', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'delete_bookmark_route', index: data.index})
+            }).then(function() {
+                if (bmRouteButton) bmRouteButton.textContent = '📂 我的路徑';
+                if (bmRouteDropdown) bmRouteDropdown.classList.remove('open');
+                setTimeout(function() { pollBookmarks(true); }, 150);
+                updateStatus('🗑️ 已刪除路徑', '#FF6961');
+            }).catch(function() {});
         });
     }
 
-    function setupBookmarkDropdown(dropdownEl) {
-        if (!dropdownEl || dropdownEl.dataset.ready === '1') return;
-        dropdownEl.dataset.ready = '1';
-        var toggle = dropdownEl.querySelector('.bm-dropdown-toggle');
-        if (!toggle) return;
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var willOpen = !dropdownEl.classList.contains('open');
-            closeBookmarkDropdowns(dropdownEl);
-            dropdownEl.classList.toggle('open', willOpen);
-        });
-    }
-
-    document.addEventListener('click', function() {
-        closeBookmarkDropdowns();
-    });
-
-    setupBookmarkDropdown(bmLocationSelect);
-    setupBookmarkDropdown(bmRouteSelect);
-
-    function postMapAction(payload) {
-        return fetch('http://127.0.0.1:__PORT__/map_event', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-    }
-
-    function deleteBookmarkLocation(item) {
-        var label = item.line || '';
-        if (!confirm('確定要刪除此地點嗎？\n\n' + label)) return;
-        postMapAction({action: 'delete_bookmark', line: item.line || ''})
-            .then(function() {
-                updateStatus('已刪除地點', '#FF8C00');
-                setTimeout(refreshBookmarks, 150);
-            }).catch(function() {
-                updateStatus('刪除地點失敗', '#FF6961');
-            });
-    }
-
-    function deleteBookmarkRoute(item) {
-        var desc = item.description || '自訂路徑';
-        if (!confirm('確定要刪除此路徑嗎？\n\n' + desc)) return;
-        postMapAction({
-            action: 'delete_route',
-            index: item.original_index,
-            timestamp: item.timestamp || '',
-            description: desc
-        }).then(function() {
-            updateStatus('已刪除路徑', '#FF8C00');
-            setTimeout(refreshBookmarks, 150);
-        }).catch(function() {
-            updateStatus('刪除路徑失敗', '#FF6961');
-        });
-    }
-
-    function populateSelect(dropdownEl, items, valueFn, textFn, deleteFn, emptyText) {
-        if (!dropdownEl) return;
-        setupBookmarkDropdown(dropdownEl);
-        var menu = dropdownEl.querySelector('.bm-dropdown-menu');
-        var label = dropdownEl.querySelector('.bm-dropdown-text');
-        if (!menu) return;
-        menu.innerHTML = '';
-        if (label) label.textContent = dropdownEl.getAttribute('data-placeholder') || '';
+    function renderBookmarkMenu(menuEl, items, emptyText, itemToData, textFn, selectFn, deleteFn) {
+        if (!menuEl) return;
+        menuEl.innerHTML = '';
         if (!items.length) {
             var empty = document.createElement('div');
             empty.className = 'bm-empty';
-            empty.textContent = emptyText || '目前沒有收藏';
-            menu.appendChild(empty);
+            empty.textContent = emptyText;
+            menuEl.appendChild(empty);
+            return;
+        }
+        items.forEach(function(item) {
+            var data = itemToData(item);
+            var row = document.createElement('div');
+            row.className = 'bm-item';
+
+            var text = document.createElement('div');
+            text.className = 'bm-item-text';
+            text.textContent = textFn(item);
+            text.title = text.textContent;
+            text.addEventListener('click', function() {
+                selectFn(JSON.stringify(data));
+            });
+
+            var del = document.createElement('button');
+            del.className = 'bm-item-delete';
+            del.type = 'button';
+            del.title = '刪除';
+            del.textContent = '🗑️';
+            del.addEventListener('click', function(e) {
+                e.stopPropagation();
+                deleteFn(data);
+            });
+
+            row.appendChild(text);
+            row.appendChild(del);
+            menuEl.appendChild(row);
+        });
+    }
+
+    function pollBookmarks(refreshNow) {
+        if (!mapInitialized || !map) {
+            setTimeout(pollBookmarks, 2000);
             return;
         }
         items.forEach(function(item) {
@@ -1482,13 +1577,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var items = d.items || [];
-                populateSelect(
-                    bmLocationSelect,
+                renderBookmarkMenu(
+                    bmLocationMenu,
                     items,
-                    function(item) { window.onBookmarkLocationSelect(JSON.stringify({lat: item.lat, lng: item.lng})); },
+                    '(無收藏地點)',
+                    function(item) { return {line: item.line, lat: item.lat, lng: item.lng}; },
                     function(item) { return item.line || (item.lat.toFixed(6) + ', ' + item.lng.toFixed(6)); },
-                    deleteBookmarkLocation,
-                    '目前沒有收藏地點'
+                    window.onBookmarkLocationSelect,
+                    deleteBookmarkLocationItem
                 );
             }).catch(function() {});
         // poll routes
@@ -1496,17 +1592,23 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var items = d.items || [];
-                populateSelect(
-                    bmRouteSelect,
+                renderBookmarkMenu(
+                    bmRouteMenu,
                     items,
-                    function(item) { window.onBookmarkRouteSelect(JSON.stringify({points: item.points || []})); },
+                    '(無收藏路徑)',
+                    function(item) {
+                        var desc = item.description || '自訂路徑';
+                        var n = (item.points || []).length;
+                        var label = (item.timestamp ? '[' + item.timestamp + '] ' : '') + desc + ' (' + n + '點)';
+                        return {index: item.index, description: desc, label: label, points: item.points || []};
+                    },
                     function(item) {
                         var desc = item.description || '自訂路徑';
                         var n = (item.points || []).length;
                         return (item.timestamp ? '[' + item.timestamp + '] ' : '') + desc + ' (' + n + '點)';
                     },
-                    deleteBookmarkRoute,
-                    '目前沒有收藏路徑'
+                    window.onBookmarkRouteSelect,
+                    deleteBookmarkRouteItem
                 );
             }).catch(function() {});
     }
@@ -1518,7 +1620,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         }
         refreshBookmarks();
         // re-poll every 5 seconds to stay in sync
-        setTimeout(pollBookmarks, 5000);
+        if (!refreshNow) setTimeout(pollBookmarks, 5000);
     }
 
     function syncRouteToPython() {

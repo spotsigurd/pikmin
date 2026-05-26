@@ -38,6 +38,7 @@ class SimulatorGUI:
         
         # 狀態控制變數
         self.tunneld_proc = None
+        self._tunneld_generation = 0
         self._browser_proc = None
         self._is_auto_connecting = False
         self._auto_retry_count = 0
@@ -126,6 +127,50 @@ class SimulatorGUI:
     def _validate_port(self, P):
         if P == "": return True
         return P.isdigit() and len(P) <= 5
+
+    def _show_confirm_dialog(self, title, message, detail="", parent=None, confirm_text="確定刪除"):
+        parent = parent or self.root
+        dialog = tk.Toplevel(parent)
+        dialog.title(title)
+        dialog.transient(parent)
+        dialog.grab_set()
+        dialog.configure(bg="#FFF0F5")
+        dialog.resizable(False, False)
+
+        result = [False]
+
+        container = ttk.Frame(dialog, padding=18)
+        container.pack(fill='both', expand=True)
+
+        ttk.Label(container, text="🗑️", font=('Arial', 24)).pack(pady=(0, 6))
+        ttk.Label(container, text=message, font=('Microsoft JhengHei', 12, 'bold'),
+                  foreground="#5D4037", justify='center').pack()
+        if detail:
+            detail_label = ttk.Label(container, text=detail, justify='center', wraplength=360,
+                                     foreground="#7A5C58")
+            detail_label.pack(fill='x', pady=(10, 0))
+
+        btn_frame = ttk.Frame(container)
+        btn_frame.pack(fill='x', pady=(18, 0))
+
+        def close(value):
+            result[0] = value
+            dialog.destroy()
+
+        ttk.Button(btn_frame, text="取消", command=lambda: close(False)).pack(side='left', expand=True, fill='x', padx=(0, 6))
+        ttk.Button(btn_frame, text=confirm_text, command=lambda: close(True)).pack(side='left', expand=True, fill='x', padx=(6, 0))
+
+        dialog.bind('<Escape>', lambda _event: close(False))
+        dialog.bind('<Return>', lambda _event: close(True))
+        dialog.protocol("WM_DELETE_WINDOW", lambda: close(False))
+
+        dialog.update_idletasks()
+        x = parent.winfo_rootx() + (parent.winfo_width() - dialog.winfo_width()) // 2
+        y = parent.winfo_rooty() + (parent.winfo_height() - dialog.winfo_height()) // 2
+        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        dialog.focus_set()
+        self.root.wait_window(dialog)
+        return result[0]
 
     def _build_ui(self):
         self.root.configure(bg="#FFF0F5")
@@ -397,10 +442,22 @@ class SimulatorGUI:
     # ==========================================
     # 自動連線與底層控制
     # ==========================================
+    def _clear_rsd(self):
+        def _apply():
+            self.rsd_host.set("")
+            self.rsd_port.set("")
+            self.btn_start.config(state="disabled")
+        if threading.current_thread() is threading.main_thread():
+            _apply()
+        else:
+            self.root.after(0, _apply)
+        self.core._conn_status = "disconnected"
+
     def _auto_connect(self):
         self._is_auto_connecting = True
+        self._clear_rsd()
         self._log("⚡ 開始自動連線流程 (等待 tunneld 就緒...)", color="blue")
-        self._start_tunneld()
+        self._start_tunneld(force_restart=True)
         self._wait_for_tunneld_ready()
 
     def _wait_for_tunneld_ready(self, wait_time=0):
@@ -451,23 +508,30 @@ class SimulatorGUI:
         except Exception as e:
             self._log(f"⚠ 清除舊程序: {e}")
 
-    def _start_tunneld(self):
+    def _start_tunneld(self, force_restart=False):
+        if force_restart:
+            self._stop_tunneld_process()
         if self.tunneld_proc and self.tunneld_proc.poll() is None:
             self._log("⚠ tunneld 已在執行")
             return 
         self._log("🚀 啟動 tunneld...", color="blue")
         self.lbl_tunneld.config(text="啟動中...", foreground="orange")
         self._kill_old_tunneld()
+        self._tunneld_generation += 1
+        generation = self._tunneld_generation
 
         def _read_output():
             try:
-                self.tunneld_proc = subprocess.Popen(
+                proc = subprocess.Popen(
                     [sys.executable, "-m", "pymobiledevice3", "remote", "tunneld"],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=subprocess.CREATE_NO_WINDOW
                 )
+                self.tunneld_proc = proc
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="✅ 執行中", foreground="green"))
                 self._log("✅ tunneld 已啟動", color="green")
-                for line in self.tunneld_proc.stdout:
+                for line in proc.stdout:
+                    if generation != self._tunneld_generation:
+                        break
                     line = line.strip()
                     if not line: continue
                     line_lower = line.lower()
@@ -478,16 +542,18 @@ class SimulatorGUI:
                         m2h = re.search(r'address[:\s]+([\da-fA-F:]+)', line)
                         m2p = re.search(r'port[:\s]+(\d{4,5})', line)
                         if m2h and m2p:
-                            self._set_rsd(m2h.group(1).strip(), m2p.group(1).strip())
+                            self._set_rsd(m2h.group(1).strip(), m2p.group(1).strip(), generation=generation)
                             continue
-                    if m: self._set_rsd(m.group(1), m.group(2))
+                    if m: self._set_rsd(m.group(1), m.group(2), generation=generation)
             except Exception as e:
                 self._log(f"❌ tunneld 錯誤: {e}", color="red")
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
 
         threading.Thread(target=_read_output, daemon=True).start()
 
-    def _set_rsd(self, host, port):
+    def _set_rsd(self, host, port, generation=None):
+        if generation is not None and generation != self._tunneld_generation:
+            return
         self.root.after(0, lambda: self.rsd_host.set(host))
         self.root.after(0, lambda: self.rsd_port.set(port))
         self.root.after(0, lambda: self.btn_start.config(state="normal")) 
@@ -568,10 +634,20 @@ class SimulatorGUI:
         else: threading.Thread(target=_run, daemon=True).start()
 
     def _stop_tunneld_process(self):
+        self._tunneld_generation += 1
         if self.tunneld_proc and self.tunneld_proc.poll() is None:
             self._log("🔪 終止 tunneld 進程...", color="red")
-            self.tunneld_proc.terminate()
+            try:
+                self.tunneld_proc.terminate()
+                self.tunneld_proc.wait(timeout=3)
+            except Exception:
+                try:
+                    self.tunneld_proc.kill()
+                except Exception:
+                    pass
             self.tunneld_proc = None
+        self._kill_old_tunneld()
+        self._clear_rsd()
         self.root.after(0, lambda: self.lbl_tunneld.config(text="已停止", foreground="#555555"))
         self.core._conn_status = "disconnected"
 
@@ -654,10 +730,10 @@ class SimulatorGUI:
             self.root.after(0, lambda: self._bookmark_location(lat=data.get('lat'), lng=data.get('lng'), description=data.get('description')))
         elif action == 'bookmark_route':
             self.root.after(0, lambda: self._bookmark_route(description=data.get('description')))
-        elif action == 'delete_bookmark':
-            self.root.after(0, lambda: self._delete_bookmark(data.get('line')))
-        elif action == 'delete_route':
-            self.root.after(0, lambda: self._delete_route_from_map(data))
+        elif action == 'delete_bookmark_location':
+            self.root.after(0, lambda: self._delete_bookmark_confirmed(data.get('line')))
+        elif action == 'delete_bookmark_route':
+            self.root.after(0, lambda: self._delete_route_confirmed(data.get('index')))
         elif action == 'toggle_pause':
             self.root.after(0, self._pause_simulation)
         else:
@@ -853,7 +929,16 @@ class SimulatorGUI:
         if not selection or selection in ["(無收藏紀錄)", "📂 我的地點"]:
             messagebox.showwarning("刪除失敗", "請先從下拉選單選擇要刪除的地點！")
             return
-            
+
+        if not self._show_confirm_dialog("刪除地點", "確定要刪除此地點嗎？", selection, parent=self.root):
+            return
+
+        self._delete_bookmark_confirmed(selection)
+
+    def _delete_bookmark_confirmed(self, selection=None):
+        if not selection:
+            return
+
         bookmark_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bookmarks.txt")
         try:
             with open(bookmark_file_path, "r", encoding="utf-8") as f: lines = f.readlines()
@@ -865,31 +950,20 @@ class SimulatorGUI:
         except Exception as e:
             self._log(f"❌ 刪除地點失敗: {e}", color="red")
 
-    def _delete_route_from_map(self, data):
+    def _delete_route_confirmed(self, route_index=None):
+        try:
+            route_index = int(route_index)
+        except (TypeError, ValueError):
+            return
+
+        self._load_routes()
+        if route_index < 0 or route_index >= len(self.saved_routes):
+            return
+
+        desc = self.saved_routes[route_index].get('description', '自訂路徑')
+        del self.saved_routes[route_index]
         routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
         try:
-            self._load_routes()
-            if not self.saved_routes:
-                return
-
-            index = data.get('index')
-            target_idx = None
-            if isinstance(index, int) and 0 <= index < len(self.saved_routes):
-                target_idx = index
-            else:
-                timestamp = data.get('timestamp', '')
-                description = data.get('description', '')
-                for i, route in enumerate(self.saved_routes):
-                    if route.get('timestamp', '') == timestamp and route.get('description', '自訂路徑') == description:
-                        target_idx = i
-                        break
-
-            if target_idx is None:
-                self._log("❌ 刪除路徑失敗: 找不到指定路徑", color="red")
-                return
-
-            desc = self.saved_routes[target_idx].get('description', '自訂路徑')
-            del self.saved_routes[target_idx]
             with open(routes_file, 'w', encoding='utf-8') as f:
                 json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
             self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
@@ -979,17 +1053,12 @@ class SimulatorGUI:
                 return
             actual_idx = len(self.saved_routes) - 1 - idx[0]
             desc = self.saved_routes[actual_idx].get('description', '自訂路徑')
-            if messagebox.askyesno("刪除確認", f"確定要刪除此路徑嗎？\n\n{desc}", parent=manager_win):
-                del self.saved_routes[actual_idx]
-                routes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
-                try:
-                    with open(routes_file, 'w', encoding='utf-8') as f:
-                        json.dump(self.saved_routes, f, ensure_ascii=False, indent=2)
-                    self._log(f"🗑️ 已刪除路徑收藏: {desc}", color="orange")
-                    listbox.delete(idx[0])
-                    if not self.saved_routes: manager_win.destroy()
-                except Exception as e:
-                    self._log(f"❌ 刪除路徑失敗: {e}", color="red")
+            if not self._show_confirm_dialog("刪除路徑", "確定要刪除此路徑嗎？", desc, parent=manager_win):
+                return
+            self._delete_route_confirmed(actual_idx)
+            listbox.delete(idx[0])
+            if not self.saved_routes:
+                manager_win.destroy()
 
         def on_rename():
             idx = listbox.curselection()
