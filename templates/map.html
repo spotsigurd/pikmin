@@ -1535,6 +1535,43 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             setTimeout(pollBookmarks, 2000);
             return;
         }
+        items.forEach(function(item) {
+            var text = textFn(item);
+            var row = document.createElement('div');
+            row.className = 'bm-option';
+
+            var main = document.createElement('button');
+            main.type = 'button';
+            main.className = 'bm-option-main';
+            main.textContent = text;
+            main.title = text;
+            main.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropdownEl.classList.remove('open');
+                valueFn(item);
+            });
+
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'bm-option-delete';
+            del.textContent = '🗑️';
+            del.title = '刪除';
+            del.setAttribute('aria-label', '刪除');
+            del.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropdownEl.classList.remove('open');
+                deleteFn(item);
+            });
+
+            row.appendChild(main);
+            row.appendChild(del);
+            menu.appendChild(row);
+        });
+    }
+
+    function refreshBookmarks() {
         // poll locations
         fetch('http://127.0.0.1:__PORT__/bookmarks')
             .then(function(r) { return r.json(); })
@@ -1574,6 +1611,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                     deleteBookmarkRouteItem
                 );
             }).catch(function() {});
+    }
+
+    function pollBookmarks() {
+        if (!mapInitialized || !map) {
+            setTimeout(pollBookmarks, 2000);
+            return;
+        }
+        refreshBookmarks();
         // re-poll every 5 seconds to stay in sync
         if (!refreshNow) setTimeout(pollBookmarks, 5000);
     }
