@@ -17,6 +17,7 @@ class SimulatorGUI:
         # ── 變數綁定 ──
         self.rsd_host  = tk.StringVar()
         self.rsd_port  = tk.StringVar()
+        self.connection_type = tk.StringVar(value="usb")
         self.start_lat = tk.StringVar(value="")
         self.start_lng = tk.StringVar(value="")
         self.end_lat   = tk.StringVar(value="")
@@ -255,7 +256,10 @@ class SimulatorGUI:
 
         row2 = ttk.Frame(f_auto)
         row2.pack(fill='x')
-        ttk.Label(row2, text="手動 RSD Host:").pack(side='left', padx=(5,2))
+        ttk.Label(row2, text="Mode:").pack(side='left', padx=(5,2))
+        cmb_connection_type = ttk.Combobox(row2, textvariable=self.connection_type, values=("usb", "wifi"), width=6, state="readonly")
+        cmb_connection_type.pack(side='left', padx=(0, 5))
+        ttk.Label(row2, text="RSD Host:").pack(side='left', padx=(5,2))
         ent_rsd_host = ttk.Entry(row2, textvariable=self.rsd_host, width=22)
         ent_rsd_host.pack(side='left', padx=2)
         ttk.Label(row2, text="Port:").pack(side='left', padx=2)
@@ -568,7 +572,10 @@ class SimulatorGUI:
             return None
 
         try:
-            result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", "usb"], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+            connection_type = self.connection_type.get().strip().lower()
+            if connection_type not in ("usb", "wifi"):
+                connection_type = "usb"
+            result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", connection_type], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
             found = _parse(result.stdout + result.stderr)
             if found:
                 self._set_rsd(found[0], found[1])
@@ -1274,6 +1281,7 @@ class SimulatorGUI:
         settings_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
         data = {
             'rsd_host': self.rsd_host.get(), 'rsd_port': self.rsd_port.get(),
+            'connection_type': self.connection_type.get(),
             'speed_kmh': self.speed_kmh.get(), 'interval': self.interval.get(),
             'alert_seconds': self.alert_seconds.get(), 'auto_reconnect': self.auto_reconnect.get()
         }
