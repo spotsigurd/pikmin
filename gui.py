@@ -1185,7 +1185,7 @@ class SimulatorGUI:
         self._sim_accumulated_time = 0
         self._sim_last_update_time = time.time()
         self._timer_running = False
-        self.lbl_timer.config(text="⏱️ 行走時間: 00:00:00")
+        self.lbl_timer.config(text="⏱️ 行走時間: 00:00:01")
 
     def _start_timer(self):
         self._reset_timer()
