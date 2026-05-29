@@ -492,7 +492,8 @@ class SimulatorGUI:
         self._auto_retry_count += 1
         if self._auto_retry_count <= 3:
             self._log(f"⏳ 自動連線失敗，5 秒後進行第 {self._auto_retry_count}/3 次重試...", color="orange")
-            self.root.after(5000, lambda: self._auto_connect(force_restart=False))
+            should_force_restart = getattr(self, '_last_tunnel_device_not_connected', False)
+            self.root.after(5000, lambda: self._auto_connect(force_restart=should_force_restart))
         else:
             self._log("❌ 自動重連失敗已達 3 次上限，放棄重試。請檢查設備連線狀態。", color="red")
             self._is_auto_connecting = False
@@ -612,13 +613,18 @@ class SimulatorGUI:
         try:
             result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", connection_type], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
             output = (result.stdout or "") + (result.stderr or "")
+            output_lower = output.lower()
+            self._last_tunnel_device_not_connected = "device is not connected" in output_lower
             if output.strip():
                 for out_line in output.splitlines():
                     if out_line.strip():
                         self._log(f"[start-tunnel] {out_line.strip()}")
             self._log(f"[start-tunnel] returncode={result.returncode}")
+            if self._last_tunnel_device_not_connected:
+                self._log("⚠ start-tunnel 回報 Device is not connected，下次重試將重啟 tunneld", color="orange")
             found = _parse(output)
             if found:
+                self._last_tunnel_device_not_connected = False
                 self._set_rsd(found[0], found[1])
                 return found[0], int(found[1])
         except Exception as e:
