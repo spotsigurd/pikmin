@@ -595,11 +595,13 @@ class SimulatorGUI:
             if m_host and m_port: return m_host.group(1).strip(), m_port.group(1).strip()
             m_rsd = re.search(r'--rsd\s+([\da-fA-F:]+)\s+(\d{4,5})', cleaned, re.I)
             if m_rsd: return m_rsd.group(1).strip(), m_rsd.group(2).strip()
+            m_plain = re.search(r'\b((?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}|(?:\d{1,3}\.){3}\d{1,3})\s+(\d{4,5})\b', cleaned)
+            if m_plain: return m_plain.group(1).strip(), m_plain.group(2).strip()
             return None
 
         def _run_start_tunnel(mode, run_timeout):
             result = subprocess.run(
-                [sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", mode],
+                [sys.executable, "-m", "pymobiledevice3", "--no-color", "remote", "start-tunnel", "--script-mode", "-t", mode],
                 capture_output=True,
                 text=True,
                 timeout=run_timeout,
@@ -612,6 +614,23 @@ class SimulatorGUI:
                     if out_line.strip():
                         self._log(f"[start-tunnel:{mode}] {out_line.strip()}")
             self._log(f"[start-tunnel:{mode}] returncode={result.returncode}")
+            return output, output_lower
+
+        def _run_lockdown_start_tunnel(run_timeout):
+            result = subprocess.run(
+                [sys.executable, "-m", "pymobiledevice3", "--no-color", "lockdown", "start-tunnel", "--script-mode"],
+                capture_output=True,
+                text=True,
+                timeout=run_timeout,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            output = (result.stdout or "") + (result.stderr or "")
+            output_lower = output.lower()
+            if output.strip():
+                for out_line in output.splitlines():
+                    if out_line.strip():
+                        self._log(f"[start-tunnel:lockdown] {out_line.strip()}")
+            self._log(f"[start-tunnel:lockdown] returncode={result.returncode}")
             return output, output_lower
 
         connection_type = self.connection_type.get().strip().lower()
@@ -643,6 +662,18 @@ class SimulatorGUI:
                 self._device_not_connected_count = 0
                 self._set_rsd(found[0], found[1])
                 return found[0], int(found[1])
+
+            # 某些版本在 Windows 下 remote start-tunnel 不穩，改用 lockdown start-tunnel 作為 fallback
+            self._log("⚠ 嘗試 lockdown start-tunnel fallback...", color="orange")
+            lockdown_output, lockdown_lower = _run_lockdown_start_tunnel(timeout)
+            if "device is not connected" in lockdown_lower:
+                self._last_tunnel_device_not_connected = True
+            lockdown_found = _parse(lockdown_output)
+            if lockdown_found:
+                self._last_tunnel_device_not_connected = False
+                self._device_not_connected_count = 0
+                self._set_rsd(lockdown_found[0], lockdown_found[1])
+                return lockdown_found[0], int(lockdown_found[1])
 
             if connection_type == "wifi" and getattr(self, '_device_not_connected_count', 0) >= 2:
                 self._log("⚠ WiFi 持續回報未連線，嘗試 USB fallback 取得 RSD...", color="orange")
