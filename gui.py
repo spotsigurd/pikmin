@@ -597,6 +597,23 @@ class SimulatorGUI:
             if m_rsd: return m_rsd.group(1).strip(), m_rsd.group(2).strip()
             return None
 
+        def _run_start_tunnel(mode, run_timeout):
+            result = subprocess.run(
+                [sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", mode],
+                capture_output=True,
+                text=True,
+                timeout=run_timeout,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            output = (result.stdout or "") + (result.stderr or "")
+            output_lower = output.lower()
+            if output.strip():
+                for out_line in output.splitlines():
+                    if out_line.strip():
+                        self._log(f"[start-tunnel:{mode}] {out_line.strip()}")
+            self._log(f"[start-tunnel:{mode}] returncode={result.returncode}")
+            return output, output_lower
+
         connection_type = self.connection_type.get().strip().lower()
         if connection_type not in ("usb", "wifi"):
             connection_type = "usb"
@@ -611,24 +628,35 @@ class SimulatorGUI:
             time.sleep(0.5)
 
         try:
-            result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", connection_type], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
-            output = (result.stdout or "") + (result.stderr or "")
-            output_lower = output.lower()
+            output, output_lower = _run_start_tunnel(connection_type, timeout)
             self._last_tunnel_device_not_connected = "device is not connected" in output_lower
-            if output.strip():
-                for out_line in output.splitlines():
-                    if out_line.strip():
-                        self._log(f"[start-tunnel] {out_line.strip()}")
-            self._log(f"[start-tunnel] returncode={result.returncode}")
             if self._last_tunnel_device_not_connected:
                 self._log("⚠ start-tunnel 回報 Device is not connected，下次重試將重啟 tunneld", color="orange")
+                fail_count = getattr(self, '_device_not_connected_count', 0) + 1
+                self._device_not_connected_count = fail_count
+            else:
+                self._device_not_connected_count = 0
+
             found = _parse(output)
             if found:
                 self._last_tunnel_device_not_connected = False
+                self._device_not_connected_count = 0
                 self._set_rsd(found[0], found[1])
                 return found[0], int(found[1])
+
+            if connection_type == "wifi" and getattr(self, '_device_not_connected_count', 0) >= 2:
+                self._log("⚠ WiFi 持續回報未連線，嘗試 USB fallback 取得 RSD...", color="orange")
+                usb_output, _ = _run_start_tunnel("usb", timeout)
+                usb_found = _parse(usb_output)
+                if usb_found:
+                    self._last_tunnel_device_not_connected = False
+                    self._device_not_connected_count = 0
+                    self._set_rsd(usb_found[0], usb_found[1])
+                    return usb_found[0], int(usb_found[1])
         except Exception as e:
             self._log(f"[start-tunnel] 例外: {e}", color="orange")
+        if connection_type == "wifi" and getattr(self, '_last_tunnel_device_not_connected', False):
+            raise RuntimeError("未偵測到 RSD（模式: wifi，Device is not connected；請先用 USB 連線並解鎖/信任一次）")
         raise RuntimeError(f"未偵測到 RSD（模式: {connection_type}）")
 
     def _detect_rsd(self):
