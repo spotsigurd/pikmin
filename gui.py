@@ -549,6 +549,15 @@ class SimulatorGUI:
                             self._set_rsd(m2h.group(1).strip(), m2p.group(1).strip(), generation=generation)
                             continue
                     if m: self._set_rsd(m.group(1), m.group(2), generation=generation)
+
+                # tunneld 非預期結束（如 USB 拔除），若 generation 仍匹配則自動重啟
+                if generation == self._tunneld_generation:
+                    self._log("⚠ tunneld 已結束（裝置斷線？），5 秒後嘗試重新建立連線...", color="orange")
+                    self._clear_rsd()
+                    self.root.after(0, lambda: self.lbl_tunneld.config(text="重啟中...", foreground="orange"))
+                    time.sleep(5)
+                    if generation == self._tunneld_generation:
+                        self.root.after(0, lambda: self._start_tunneld(force_restart=False))
             except Exception as e:
                 self._log(f"❌ tunneld 錯誤: {e}", color="red")
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
