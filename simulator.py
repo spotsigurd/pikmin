@@ -556,10 +556,27 @@ class SimulatorCore:
                     time.sleep(0.5)
                 raise RuntimeError("auto-connect in progress; skip simulator-led tunnel restart")
 
+            # 優先沿用目前 tunneld，避免每次 refresh 都重啟造成不穩定
+            proc_alive = _run_on_gui_thread(
+                lambda: (self.gui.tunneld_proc is not None and self.gui.tunneld_proc.poll() is None),
+                timeout=2
+            )
+            if not proc_alive:
+                _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
+                _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
+
+            deadline = time.time() + 25
+            while time.time() < deadline:
+                host, port = _get_gui_rsd()
+                if host and port:
+                    return host, int(port)
+                time.sleep(0.5)
+
+            # 仍失敗才強制重啟 tunneld 再試一次
             _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
             _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
 
-            deadline = time.time() + 25
+            deadline = time.time() + 20
             while time.time() < deadline:
                 host, port = _get_gui_rsd()
                 if host and port:
