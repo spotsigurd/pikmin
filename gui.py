@@ -546,6 +546,9 @@ class SimulatorGUI:
                     line_lower = line.lower()
                     if any(k in line_lower for k in ["rsd", "address", "tunnel", "error"]) or re.search(r'\bport\b', line_lower):
                         self._log(f"[tunneld] {line}")
+                    # 跳過斷線通知，避免把舊的 RSD 地址誤判為有效連線
+                    if 'disconnect' in line_lower:
+                        continue
                     m = re.search(r'\b((?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4})\s+(\d{4,5})\b', line)
                     if not m:
                         m2h = re.search(r'address[:\s]+([\da-fA-F:]+)', line)
@@ -585,17 +588,27 @@ class SimulatorGUI:
             if m_host and m_port: return m_host.group(1).strip(), m_port.group(1).strip()
             return None
 
+        connection_type = self.connection_type.get().strip().lower()
+        if connection_type not in ("usb", "wifi"):
+            connection_type = "usb"
+
+        # 若 tunneld 剛重啟，等待最多 20 秒讓其建立新 tunnel
+        wait_deadline = time.time() + 20
+        while time.time() < wait_deadline:
+            if self.rsd_host.get() and self.rsd_port.get():
+                h, p = self.rsd_host.get(), self.rsd_port.get()
+                self._log(f"✅ RSD（tunneld 自動解析）: {h}:{p}", color="green")
+                return h, int(p)
+            time.sleep(0.5)
+
         try:
-            connection_type = self.connection_type.get().strip().lower()
-            if connection_type not in ("usb", "wifi"):
-                connection_type = "usb"
             result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", connection_type], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
             found = _parse(result.stdout + result.stderr)
             if found:
                 self._set_rsd(found[0], found[1])
                 return found[0], int(found[1])
         except Exception: pass
-        raise RuntimeError("未偵測到 RSD (USB皆失敗)")
+        raise RuntimeError(f"未偵測到 RSD（模式: {connection_type}）")
 
     def _detect_rsd(self):
         if self.rsd_host.get() and self.rsd_port.get():
@@ -626,13 +639,25 @@ class SimulatorGUI:
         def _run():
             try:
                 result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "mounter", "auto-mount"], capture_output=True, text=True, timeout=60, creationflags=subprocess.CREATE_NO_WINDOW)
-                if result.returncode == 0 or "mounted" in (result.stdout + result.stderr).lower():
+                output = (result.stdout + result.stderr).strip()
+                output_lower = output.lower()
+                # 記錄實際輸出以便除錯
+                if output:
+                    for out_line in output.splitlines():
+                        if out_line.strip():
+                            self._log(f"[mount] {out_line.strip()}")
+                if result.returncode == 0:
                     self.root.after(0, lambda: self.lbl_mount.config(text="✅ 完成", foreground="green"))
                     self._log("✅ DDI 掛載完成", color="green")
+                elif "already mounted" in output_lower or "image already" in output_lower:
+                    self.root.after(0, lambda: self.lbl_mount.config(text="✅ 已掛載", foreground="green"))
+                    self._log("✅ DDI 已掛載（先前已掛載）", color="green")
                 else:
-                    self.root.after(0, lambda: self.lbl_mount.config(text="⚠ 確認", foreground="orange"))
+                    self.root.after(0, lambda: self.lbl_mount.config(text="⚠ 掛載失敗", foreground="orange"))
+                    self._log(f"⚠ DDI 掛載失敗 (returncode={result.returncode})", color="orange")
             except Exception as e:
                 self.root.after(0, lambda: self.lbl_mount.config(text="❌ 失敗", foreground="red"))
+                self._log(f"❌ auto-mount 錯誤: {e}", color="red")
             finally:
                 if on_complete: self.root.after(0, on_complete)
         threading.Thread(target=_run, daemon=True).start()
