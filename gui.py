@@ -471,7 +471,12 @@ class SimulatorGUI:
             self._auto_mount()
         elif wait_time > 15000:
             self._log("❌ 等待 tunneld 就緒逾時，嘗試重連...", color="red")
-            self._handle_auto_connect_retry()
+            # 若 tunneld 仍在執行，直接進入掛載+偵測流程（wifi 模式需透過 start-tunnel 取得 RSD）
+            if self.tunneld_proc and self.tunneld_proc.poll() is None:
+                self._log("🔍 tunneld 仍在執行，嘗試透過 start-tunnel 偵測 RSD...", color="blue")
+                self._auto_mount()
+            else:
+                self._handle_auto_connect_retry()
         else:
             self.root.after(500, lambda: self._wait_for_tunneld_ready(wait_time + 500))
 
