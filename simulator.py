@@ -554,6 +554,7 @@ class SimulatorCore:
                     if host and port:
                         return host, int(port)
                     time.sleep(0.5)
+                raise RuntimeError("auto-connect in progress; skip simulator-led tunnel restart")
 
             _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
             _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)

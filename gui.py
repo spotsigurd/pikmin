@@ -457,11 +457,11 @@ class SimulatorGUI:
             self.root.after(0, _apply)
         self.core._conn_status = "disconnected"
 
-    def _auto_connect(self):
+    def _auto_connect(self, force_restart=True):
         self._is_auto_connecting = True
         self._clear_rsd()
         self._log("⚡ 開始自動連線流程 (等待 tunneld 就緒...)", color="blue")
-        self._start_tunneld(force_restart=True)
+        self._start_tunneld(force_restart=force_restart)
         self._wait_for_tunneld_ready()
 
     def _wait_for_tunneld_ready(self, wait_time=0):
@@ -469,7 +469,7 @@ class SimulatorGUI:
         if self.rsd_host.get() and self.rsd_port.get():
             self._log("⚡ tunneld 已就緒，準備進行下一步...", color="blue")
             self._auto_mount()
-        elif wait_time > 15000:
+        elif wait_time > 30000:
             self._log("❌ 等待 tunneld 就緒逾時，嘗試重連...", color="red")
             # 若 tunneld 仍在執行，直接進入掛載+偵測流程（wifi 模式需透過 start-tunnel 取得 RSD）
             if self.tunneld_proc and self.tunneld_proc.poll() is None:
@@ -492,7 +492,7 @@ class SimulatorGUI:
         self._auto_retry_count += 1
         if self._auto_retry_count <= 3:
             self._log(f"⏳ 自動連線失敗，5 秒後進行第 {self._auto_retry_count}/3 次重試...", color="orange")
-            self.root.after(5000, self._auto_connect)
+            self.root.after(5000, lambda: self._auto_connect(force_restart=False))
         else:
             self._log("❌ 自動重連失敗已達 3 次上限，放棄重試。請檢查設備連線狀態。", color="red")
             self._is_auto_connecting = False
@@ -588,9 +588,12 @@ class SimulatorGUI:
 
     def _detect_rsd_sync(self, timeout=15):
         def _parse(output):
-            m_host = re.search(r'HOST=([\da-fA-F:.\s]+)', output, re.I)
-            m_port = re.search(r'PORT=(\d{4,5})', output, re.I)
+            cleaned = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', output)
+            m_host = re.search(r'HOST=([\da-fA-F:.\s]+)', cleaned, re.I)
+            m_port = re.search(r'PORT=(\d{4,5})', cleaned, re.I)
             if m_host and m_port: return m_host.group(1).strip(), m_port.group(1).strip()
+            m_rsd = re.search(r'--rsd\s+([\da-fA-F:]+)\s+(\d{4,5})', cleaned, re.I)
+            if m_rsd: return m_rsd.group(1).strip(), m_rsd.group(2).strip()
             return None
 
         connection_type = self.connection_type.get().strip().lower()
@@ -608,11 +611,18 @@ class SimulatorGUI:
 
         try:
             result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", connection_type], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
-            found = _parse(result.stdout + result.stderr)
+            output = (result.stdout or "") + (result.stderr or "")
+            if output.strip():
+                for out_line in output.splitlines():
+                    if out_line.strip():
+                        self._log(f"[start-tunnel] {out_line.strip()}")
+            self._log(f"[start-tunnel] returncode={result.returncode}")
+            found = _parse(output)
             if found:
                 self._set_rsd(found[0], found[1])
                 return found[0], int(found[1])
-        except Exception: pass
+        except Exception as e:
+            self._log(f"[start-tunnel] 例外: {e}", color="orange")
         raise RuntimeError(f"未偵測到 RSD（模式: {connection_type}）")
 
     def _detect_rsd(self):
