@@ -546,6 +546,15 @@ class SimulatorCore:
             if not self.gui:
                 raise RuntimeError("GUI is not available")
 
+            # 若 GUI 正在自動連線，避免同時重啟 tunneld 造成互相打架
+            if getattr(self.gui, '_is_auto_connecting', False):
+                deadline_wait = time.time() + 20
+                while time.time() < deadline_wait:
+                    host, port = _get_gui_rsd()
+                    if host and port:
+                        return host, int(port)
+                    time.sleep(0.5)
+
             _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
             _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
 

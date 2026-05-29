@@ -467,7 +467,7 @@ class SimulatorGUI:
     def _wait_for_tunneld_ready(self, wait_time=0):
         if not getattr(self, '_is_auto_connecting', False): return
         if self.rsd_host.get() and self.rsd_port.get():
-            self._log("⚡ tunneld 已就緒，準備掛載 DDI...", color="blue")
+            self._log("⚡ tunneld 已就緒，準備進行下一步...", color="blue")
             self._auto_mount()
         elif wait_time > 15000:
             self._log("❌ 等待 tunneld 就緒逾時，嘗試重連...", color="red")
@@ -481,6 +481,11 @@ class SimulatorGUI:
             self.root.after(500, lambda: self._wait_for_tunneld_ready(wait_time + 500))
 
     def _auto_mount(self):
+        connection_type = self.connection_type.get().strip().lower()
+        if connection_type == "wifi":
+            self._log("ℹ WiFi 模式略過 DDI 掛載，直接偵測 RSD", color="blue")
+            self._detect_rsd()
+            return
         self._run_mount(on_complete=self._detect_rsd)
         
     def _handle_auto_connect_retry(self):
@@ -646,7 +651,17 @@ class SimulatorGUI:
                     for out_line in output.splitlines():
                         if out_line.strip():
                             self._log(f"[mount] {out_line.strip()}")
-                if result.returncode == 0:
+
+                has_error_keyword = any(k in output_lower for k in [
+                    "error",
+                    "failed",
+                    "exception",
+                    "traceback",
+                    "device is not connected",
+                    "not connected"
+                ])
+
+                if result.returncode == 0 and not has_error_keyword:
                     self.root.after(0, lambda: self.lbl_mount.config(text="✅ 完成", foreground="green"))
                     self._log("✅ DDI 掛載完成", color="green")
                 elif "already mounted" in output_lower or "image already" in output_lower:
