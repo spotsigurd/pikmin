@@ -609,14 +609,19 @@ class SimulatorGUI:
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
                 output = (result.stdout or "") + (result.stderr or "")
-                cleaned = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', output)
+                cleaned = re.sub(r'\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\)|P.*?\x1B\\)', '', output, flags=re.S)
                 data = json.loads(cleaned)
                 if isinstance(data, list) and data:
                     udid = data[0].get("Identifier") or data[0].get("UniqueDeviceID")
                     if udid:
                         return str(udid)
+                m = re.search(r'([0-9A-Fa-f]{8}-[0-9A-Fa-f]{16})', cleaned)
+                if m:
+                    return m.group(1)
             except Exception:
-                pass
+                m = re.search(r'([0-9A-Fa-f]{8}-[0-9A-Fa-f]{16})', output if 'output' in locals() else '')
+                if m:
+                    return m.group(1)
             return None
 
         def _run_start_tunnel(mode, run_timeout):

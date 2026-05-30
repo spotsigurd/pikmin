@@ -157,6 +157,7 @@ class SimulatorCore:
         self._perform_full_cleanup = False
         self.start_position_lat = None
         self.start_position_lng = None
+        self._rsd_refresh_lock = threading.Lock()
         
         self._start_map_server()
 
@@ -546,44 +547,57 @@ class SimulatorCore:
             if not self.gui:
                 raise RuntimeError("GUI is not available")
 
-            # 若 GUI 正在自動連線，避免同時重啟 tunneld 造成互相打架
-            if getattr(self.gui, '_is_auto_connecting', False):
-                deadline_wait = time.time() + 20
+            if not self._rsd_refresh_lock.acquire(blocking=False):
+                deadline_wait = time.time() + 10
                 while time.time() < deadline_wait:
                     host, port = _get_gui_rsd()
                     if host and port:
                         return host, int(port)
                     time.sleep(0.5)
-                raise RuntimeError("auto-connect in progress; skip simulator-led tunnel restart")
+                raise RuntimeError("RSD refresh already in progress")
 
-            # 優先沿用目前 tunneld，避免每次 refresh 都重啟造成不穩定
-            proc_alive = _run_on_gui_thread(
-                lambda: (self.gui.tunneld_proc is not None and self.gui.tunneld_proc.poll() is None),
-                timeout=2
-            )
-            if not proc_alive:
+            try:
+
+                # 若 GUI 正在自動連線，避免同時重啟 tunneld 造成互相打架
+                if getattr(self.gui, '_is_auto_connecting', False):
+                    deadline_wait = time.time() + 20
+                    while time.time() < deadline_wait:
+                        host, port = _get_gui_rsd()
+                        if host and port:
+                            return host, int(port)
+                        time.sleep(0.5)
+                    raise RuntimeError("auto-connect in progress; skip simulator-led tunnel restart")
+
+                # 優先沿用目前 tunneld，避免每次 refresh 都重啟造成不穩定
+                proc_alive = _run_on_gui_thread(
+                    lambda: (self.gui.tunneld_proc is not None and self.gui.tunneld_proc.poll() is None),
+                    timeout=2
+                )
+                if not proc_alive:
+                    _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
+                    _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
+
+                deadline = time.time() + 25
+                while time.time() < deadline:
+                    host, port = _get_gui_rsd()
+                    if host and port:
+                        return host, int(port)
+                    time.sleep(0.5)
+
+                # 仍失敗才強制重啟 tunneld 再試一次
                 _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
                 _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
 
-            deadline = time.time() + 25
-            while time.time() < deadline:
-                host, port = _get_gui_rsd()
-                if host and port:
-                    return host, int(port)
-                time.sleep(0.5)
+                deadline = time.time() + 20
+                while time.time() < deadline:
+                    host, port = _get_gui_rsd()
+                    if host and port:
+                        return host, int(port)
+                    time.sleep(0.5)
 
-            # 仍失敗才強制重啟 tunneld 再試一次
-            _run_on_gui_thread(lambda: self.gui._clear_rsd(), timeout=2)
-            _run_on_gui_thread(lambda: self.gui._start_tunneld(force_restart=True), timeout=8)
-
-            deadline = time.time() + 20
-            while time.time() < deadline:
-                host, port = _get_gui_rsd()
-                if host and port:
-                    return host, int(port)
-                time.sleep(0.5)
-
-            host, port = self.gui._detect_rsd_sync(timeout=20)
-            return host, int(port)
+                host, port = self.gui._detect_rsd_sync(timeout=20)
+                return host, int(port)
+            finally:
+                self._rsd_refresh_lock.release()
 
         return await asyncio.to_thread(_refresh_sync)
