@@ -496,6 +496,7 @@ class SimulatorGUI:
 
     def _kill_old_tunneld(self):
         try:
+            # 使用 netstat 查找占用 49151 端口的进程
             result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             pids = set()
             for line in result.stdout.splitlines():
@@ -503,14 +504,19 @@ class SimulatorGUI:
                     parts = line.split()
                     if parts:
                         pid = parts[-1]
-                        if pid.isdigit() and pid != "0": pids.add(pid)
+                        if pid.isdigit() and pid != "0": 
+                            pids.add(pid)
+            
             if pids:
                 for pid in pids:
-                    subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                self._log(f"🧹 已清除舊程序 (PID: {', '.join(pids)})", color="orange")
+                    try:
+                        subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    except:
+                        pass
+                self._log(f"🧹 已清除占用 49151 端口的舊進程 (PID: {', '.join(pids)})", color="orange")
                 time.sleep(1)
         except Exception as e:
-            self._log(f"⚠ 清除舊程序: {e}")
+            self._log(f"⚠ 清除舊進程: {e}")
 
     def _start_tunneld(self, force_restart=False):
         if force_restart:
@@ -571,17 +577,51 @@ class SimulatorGUI:
             if m_host and m_port: return m_host.group(1).strip(), m_port.group(1).strip()
             return None
 
-        try:
-            connection_type = self.connection_type.get().strip().lower()
-            if connection_type not in ("usb", "wifi"):
-                connection_type = "usb"
-            result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", connection_type], capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
-            found = _parse(result.stdout + result.stderr)
-            if found:
-                self._set_rsd(found[0], found[1])
-                return found[0], int(found[1])
-        except Exception: pass
-        raise RuntimeError("未偵測到 RSD (USB皆失敗)")
+        # 取得主選接方式
+        connection_type = self.connection_type.get().strip().lower()
+        if connection_type not in ("usb", "wifi"):
+            connection_type = "usb"
+        
+        # 決定嘗試的連接方式（主要 + 備用）
+        connection_types_to_try = [connection_type]
+        backup_type = "wifi" if connection_type == "usb" else "usb"
+        
+        # 逐個嘗試連接方式
+        for idx, try_type in enumerate(connection_types_to_try):
+            retry_count = 3
+            
+            for attempt in range(1, retry_count + 1):
+                try:
+                    if idx > 0 and attempt == 1:
+                        self._log(f"⚠ {connection_type} 連接失敗，自動切換到 {try_type}...", color="orange")
+                    elif idx == 0 and attempt > 1:
+                        self._log(f"🔄 {try_type} 第 {attempt}/{retry_count} 次嘗試...", color="blue")
+                    
+                    result = subprocess.run(
+                        [sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", try_type],
+                        capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    
+                    # 打印命令的實際輸出
+                    combined_output = result.stdout + result.stderr
+                    if combined_output.strip():
+                        self._log(f"[{try_type}] {combined_output[:150]}", color="blue")
+                    
+                    found = _parse(combined_output)
+                    if found:
+                        if idx > 0 or attempt > 1:
+                            self._log(f"✅ {try_type} 連接成功！", color="green")
+                        self._set_rsd(found[0], found[1])
+                        return found[0], int(found[1])
+                except Exception as e:
+                    self._log(f"[{try_type}] 異常: {str(e)[:100]}", color="orange")
+                    continue
+            
+            # 主要方式全部失敗，加入備用方式到待嘗試清單
+            if idx == 0:
+                connection_types_to_try.append(backup_type)
+        
+        raise RuntimeError("未偵測到 RSD (WiFi 和 USB 均失敗)")
 
     def _detect_rsd(self):
         if self.rsd_host.get() and self.rsd_port.get():
@@ -597,6 +637,13 @@ class SimulatorGUI:
         self._log("🔍 偵測 RSD...", color="blue")
         def _run():
             try:
+                # 檢查當前選定的連接方式
+                connection_type = self.connection_type.get().strip().lower()
+                if connection_type == "wifi":
+                    # WiFi 模式需要額外的等待讓 tunneld 發現設備
+                    self._log(f"⏳ WiFi 模式：等待 20 秒讓 tunneld 完整掃描...", color="orange")
+                    time.sleep(20)
+                
                 self._detect_rsd_sync(15)
                 if getattr(self, '_is_auto_connecting', False):
                     self.root.after(0, self._finalize_auto_connect)
