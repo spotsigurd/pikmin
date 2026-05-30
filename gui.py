@@ -457,32 +457,43 @@ class SimulatorGUI:
             self.root.after(0, _apply)
         self.core._conn_status = "disconnected"
 
-    def _auto_connect(self):
+    def _auto_connect(self, force_restart=True):
         self._is_auto_connecting = True
         self._clear_rsd()
         self._log("⚡ 開始自動連線流程 (等待 tunneld 就緒...)", color="blue")
-        self._start_tunneld(force_restart=True)
+        self._start_tunneld(force_restart=force_restart)
         self._wait_for_tunneld_ready()
 
     def _wait_for_tunneld_ready(self, wait_time=0):
         if not getattr(self, '_is_auto_connecting', False): return
         if self.rsd_host.get() and self.rsd_port.get():
-            self._log("⚡ tunneld 已就緒，準備掛載 DDI...", color="blue")
+            self._log("⚡ tunneld 已就緒，準備進行下一步...", color="blue")
             self._auto_mount()
-        elif wait_time > 15000:
+        elif wait_time > 30000:
             self._log("❌ 等待 tunneld 就緒逾時，嘗試重連...", color="red")
-            self._handle_auto_connect_retry()
+            # 若 tunneld 仍在執行，直接進入掛載+偵測流程（wifi 模式需透過 start-tunnel 取得 RSD）
+            if self.tunneld_proc and self.tunneld_proc.poll() is None:
+                self._log("🔍 tunneld 仍在執行，嘗試透過 start-tunnel 偵測 RSD...", color="blue")
+                self._auto_mount()
+            else:
+                self._handle_auto_connect_retry()
         else:
             self.root.after(500, lambda: self._wait_for_tunneld_ready(wait_time + 500))
 
     def _auto_mount(self):
+        connection_type = self.connection_type.get().strip().lower()
+        if connection_type == "wifi":
+            self._log("ℹ WiFi 模式略過 DDI 掛載，直接偵測 RSD", color="blue")
+            self._detect_rsd()
+            return
         self._run_mount(on_complete=self._detect_rsd)
         
     def _handle_auto_connect_retry(self):
         self._auto_retry_count += 1
         if self._auto_retry_count <= 3:
             self._log(f"⏳ 自動連線失敗，5 秒後進行第 {self._auto_retry_count}/3 次重試...", color="orange")
-            self.root.after(5000, self._auto_connect)
+            should_force_restart = getattr(self, '_last_tunnel_device_not_connected', False)
+            self.root.after(5000, lambda: self._auto_connect(force_restart=should_force_restart))
         else:
             self._log("❌ 自動重連失敗已達 3 次上限，放棄重試。請檢查設備連線狀態。", color="red")
             self._is_auto_connecting = False
@@ -547,6 +558,9 @@ class SimulatorGUI:
                     line_lower = line.lower()
                     if any(k in line_lower for k in ["rsd", "address", "tunnel", "error"]) or re.search(r'\bport\b', line_lower):
                         self._log(f"[tunneld] {line}")
+                    # 跳過斷線通知，避免把舊的 RSD 地址誤判為有效連線
+                    if 'disconnect' in line_lower:
+                        continue
                     m = re.search(r'\b((?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4})\s+(\d{4,5})\b', line)
                     if not m:
                         m2h = re.search(r'address[:\s]+([\da-fA-F:]+)', line)
@@ -555,6 +569,15 @@ class SimulatorGUI:
                             self._set_rsd(m2h.group(1).strip(), m2p.group(1).strip(), generation=generation)
                             continue
                     if m: self._set_rsd(m.group(1), m.group(2), generation=generation)
+
+                # tunneld 非預期結束（如 USB 拔除），若 generation 仍匹配則自動重啟
+                if generation == self._tunneld_generation:
+                    self._log("⚠ tunneld 已結束（裝置斷線？），5 秒後嘗試重新建立連線...", color="orange")
+                    self._clear_rsd()
+                    self.root.after(0, lambda: self.lbl_tunneld.config(text="重啟中...", foreground="orange"))
+                    time.sleep(5)
+                    if generation == self._tunneld_generation:
+                        self.root.after(0, lambda: self._start_tunneld(force_restart=False))
             except Exception as e:
                 self._log(f"❌ tunneld 錯誤: {e}", color="red")
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
@@ -572,56 +595,157 @@ class SimulatorGUI:
 
     def _detect_rsd_sync(self, timeout=15):
         def _parse(output):
-            m_host = re.search(r'HOST=([\da-fA-F:.\s]+)', output, re.I)
-            m_port = re.search(r'PORT=(\d{4,5})', output, re.I)
+            cleaned = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', output)
+            m_host = re.search(r'HOST=([\da-fA-F:.\s]+)', cleaned, re.I)
+            m_port = re.search(r'PORT=(\d{4,5})', cleaned, re.I)
             if m_host and m_port: return m_host.group(1).strip(), m_port.group(1).strip()
+            m_rsd = re.search(r'--rsd\s+([\da-fA-F:]+)\s+(\d{4,5})', cleaned, re.I)
+            if m_rsd: return m_rsd.group(1).strip(), m_rsd.group(2).strip()
+            m_plain = re.search(r'\b((?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}|(?:\d{1,3}\.){3}\d{1,3})\s+(\d{4,5})\b', cleaned)
+            if m_plain: return m_plain.group(1).strip(), m_plain.group(2).strip()
             return None
 
-        # 取得主選接方式
+        def _resolve_udid():
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pymobiledevice3", "--no-color", "usbmux", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=8,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                output = (result.stdout or "") + (result.stderr or "")
+                cleaned = re.sub(r'\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\)|P.*?\x1B\\)', '', output, flags=re.S)
+                data = json.loads(cleaned)
+                if isinstance(data, list) and data:
+                    udid = data[0].get("Identifier") or data[0].get("UniqueDeviceID")
+                    if udid:
+                        return str(udid)
+                m = re.search(r'([0-9A-Fa-f]{8}-[0-9A-Fa-f]{16})', cleaned)
+                if m:
+                    return m.group(1)
+            except Exception:
+                m = re.search(r'([0-9A-Fa-f]{8}-[0-9A-Fa-f]{16})', output if 'output' in locals() else '')
+                if m:
+                    return m.group(1)
+            return None
+
+        def _run_start_tunnel(mode, run_timeout):
+            cmd = [sys.executable, "-m", "pymobiledevice3", "--no-color", "remote", "start-tunnel", "--script-mode", "-t", mode]
+            if target_udid:
+                cmd += ["--udid", target_udid]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=run_timeout,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            output = (result.stdout or "") + (result.stderr or "")
+            output_lower = output.lower()
+            if output.strip():
+                for out_line in output.splitlines():
+                    if out_line.strip():
+                        self._log(f"[start-tunnel:{mode}] {out_line.strip()}")
+            self._log(f"[start-tunnel:{mode}] returncode={result.returncode}")
+            return output, output_lower
+
+        def _run_lockdown_start_tunnel(run_timeout):
+            cmd = [sys.executable, "-m", "pymobiledevice3", "--no-color", "lockdown", "start-tunnel", "--script-mode"]
+            if target_udid:
+                cmd += ["--udid", target_udid]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=run_timeout,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            output = (result.stdout or "") + (result.stderr or "")
+            output_lower = output.lower()
+            if output.strip():
+                for out_line in output.splitlines():
+                    if out_line.strip():
+                        self._log(f"[start-tunnel:lockdown] {out_line.strip()}")
+            self._log(f"[start-tunnel:lockdown] returncode={result.returncode}")
+            return output, output_lower
+
         connection_type = self.connection_type.get().strip().lower()
         if connection_type not in ("usb", "wifi"):
             connection_type = "usb"
-        
-        # 決定嘗試的連接方式（主要 + 備用）
-        connection_types_to_try = [connection_type]
-        backup_type = "wifi" if connection_type == "usb" else "usb"
-        
-        # 逐個嘗試連接方式
-        for idx, try_type in enumerate(connection_types_to_try):
-            retry_count = 3
-            
-            for attempt in range(1, retry_count + 1):
-                try:
-                    if idx > 0 and attempt == 1:
-                        self._log(f"⚠ {connection_type} 連接失敗，自動切換到 {try_type}...", color="orange")
-                    elif idx == 0 and attempt > 1:
-                        self._log(f"🔄 {try_type} 第 {attempt}/{retry_count} 次嘗試...", color="blue")
-                    
-                    result = subprocess.run(
-                        [sys.executable, "-m", "pymobiledevice3", "remote", "start-tunnel", "--script-mode", "-t", try_type],
-                        capture_output=True, text=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW
-                    )
-                    
-                    # 打印命令的實際輸出
-                    combined_output = result.stdout + result.stderr
-                    if combined_output.strip():
-                        self._log(f"[{try_type}] {combined_output[:150]}", color="blue")
-                    
-                    found = _parse(combined_output)
-                    if found:
-                        if idx > 0 or attempt > 1:
-                            self._log(f"✅ {try_type} 連接成功！", color="green")
-                        self._set_rsd(found[0], found[1])
-                        return found[0], int(found[1])
-                except Exception as e:
-                    self._log(f"[{try_type}] 異常: {str(e)[:100]}", color="orange")
-                    continue
-            
-            # 主要方式全部失敗，加入備用方式到待嘗試清單
-            if idx == 0:
-                connection_types_to_try.append(backup_type)
-        
-        raise RuntimeError("未偵測到 RSD (WiFi 和 USB 均失敗)")
+
+        target_udid = _resolve_udid()
+        if target_udid:
+            self._log(f"ℹ 使用裝置 UDID: {target_udid}")
+        else:
+            self._log("⚠ 無法從 usbmux 取得 UDID，改用預設裝置", color="orange")
+            if connection_type == "wifi":
+                raise RuntimeError("WiFi 模式目前需先接上 USB 以建立可用 tunnel（未偵測到 USB 裝置）")
+
+        # 若 tunneld 剛重啟，等待最多 20 秒讓其建立新 tunnel
+        wait_deadline = time.time() + 20
+        while time.time() < wait_deadline:
+            if self.rsd_host.get() and self.rsd_port.get():
+                h, p = self.rsd_host.get(), self.rsd_port.get()
+                self._log(f"✅ RSD（tunneld 自動解析）: {h}:{p}", color="green")
+                return h, int(p)
+            time.sleep(0.5)
+
+        try:
+            if connection_type == "wifi":
+                self._log("ℹ WiFi 模式先嘗試 lockdown start-tunnel（USB bootstrap）...", color="blue")
+                lockdown_output, lockdown_lower = _run_lockdown_start_tunnel(timeout)
+                if "device is not connected" in lockdown_lower:
+                    self._last_tunnel_device_not_connected = True
+                lockdown_found = _parse(lockdown_output)
+                if lockdown_found:
+                    self._last_tunnel_device_not_connected = False
+                    self._device_not_connected_count = 0
+                    self._set_rsd(lockdown_found[0], lockdown_found[1])
+                    return lockdown_found[0], int(lockdown_found[1])
+
+            output, output_lower = _run_start_tunnel(connection_type, timeout)
+            self._last_tunnel_device_not_connected = "device is not connected" in output_lower
+            if self._last_tunnel_device_not_connected:
+                self._log("⚠ start-tunnel 回報 Device is not connected，下次重試將重啟 tunneld", color="orange")
+                fail_count = getattr(self, '_device_not_connected_count', 0) + 1
+                self._device_not_connected_count = fail_count
+            else:
+                self._device_not_connected_count = 0
+
+            found = _parse(output)
+            if found:
+                self._last_tunnel_device_not_connected = False
+                self._device_not_connected_count = 0
+                self._set_rsd(found[0], found[1])
+                return found[0], int(found[1])
+
+            # 某些版本在 Windows 下 remote start-tunnel 不穩，改用 lockdown start-tunnel 作為 fallback
+            self._log("⚠ 嘗試 lockdown start-tunnel fallback...", color="orange")
+            lockdown_output, lockdown_lower = _run_lockdown_start_tunnel(timeout)
+            if "device is not connected" in lockdown_lower:
+                self._last_tunnel_device_not_connected = True
+            lockdown_found = _parse(lockdown_output)
+            if lockdown_found:
+                self._last_tunnel_device_not_connected = False
+                self._device_not_connected_count = 0
+                self._set_rsd(lockdown_found[0], lockdown_found[1])
+                return lockdown_found[0], int(lockdown_found[1])
+
+            if connection_type == "wifi" and getattr(self, '_device_not_connected_count', 0) >= 2:
+                self._log("⚠ WiFi 持續回報未連線，嘗試 USB fallback 取得 RSD...", color="orange")
+                usb_output, _ = _run_start_tunnel("usb", timeout)
+                usb_found = _parse(usb_output)
+                if usb_found:
+                    self._last_tunnel_device_not_connected = False
+                    self._device_not_connected_count = 0
+                    self._set_rsd(usb_found[0], usb_found[1])
+                    return usb_found[0], int(usb_found[1])
+        except Exception as e:
+            self._log(f"[start-tunnel] 例外: {e}", color="orange")
+        if connection_type == "wifi" and getattr(self, '_last_tunnel_device_not_connected', False):
+            raise RuntimeError("未偵測到 RSD（模式: wifi，Device is not connected；請先用 USB 連線並解鎖/信任一次）")
+        raise RuntimeError(f"未偵測到 RSD（模式: {connection_type}）")
 
     def _detect_rsd(self):
         if self.rsd_host.get() and self.rsd_port.get():
@@ -659,13 +783,35 @@ class SimulatorGUI:
         def _run():
             try:
                 result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "mounter", "auto-mount"], capture_output=True, text=True, timeout=60, creationflags=subprocess.CREATE_NO_WINDOW)
-                if result.returncode == 0 or "mounted" in (result.stdout + result.stderr).lower():
+                output = (result.stdout + result.stderr).strip()
+                output_lower = output.lower()
+                # 記錄實際輸出以便除錯
+                if output:
+                    for out_line in output.splitlines():
+                        if out_line.strip():
+                            self._log(f"[mount] {out_line.strip()}")
+
+                has_error_keyword = any(k in output_lower for k in [
+                    "error",
+                    "failed",
+                    "exception",
+                    "traceback",
+                    "device is not connected",
+                    "not connected"
+                ])
+
+                if result.returncode == 0 and not has_error_keyword:
                     self.root.after(0, lambda: self.lbl_mount.config(text="✅ 完成", foreground="green"))
                     self._log("✅ DDI 掛載完成", color="green")
+                elif "already mounted" in output_lower or "image already" in output_lower:
+                    self.root.after(0, lambda: self.lbl_mount.config(text="✅ 已掛載", foreground="green"))
+                    self._log("✅ DDI 已掛載（先前已掛載）", color="green")
                 else:
-                    self.root.after(0, lambda: self.lbl_mount.config(text="⚠ 確認", foreground="orange"))
+                    self.root.after(0, lambda: self.lbl_mount.config(text="⚠ 掛載失敗", foreground="orange"))
+                    self._log(f"⚠ DDI 掛載失敗 (returncode={result.returncode})", color="orange")
             except Exception as e:
                 self.root.after(0, lambda: self.lbl_mount.config(text="❌ 失敗", foreground="red"))
+                self._log(f"❌ auto-mount 錯誤: {e}", color="red")
             finally:
                 if on_complete: self.root.after(0, on_complete)
         threading.Thread(target=_run, daemon=True).start()
