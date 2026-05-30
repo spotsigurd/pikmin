@@ -599,9 +599,32 @@ class SimulatorGUI:
             if m_plain: return m_plain.group(1).strip(), m_plain.group(2).strip()
             return None
 
+        def _resolve_udid():
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pymobiledevice3", "--no-color", "usbmux", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=8,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                output = (result.stdout or "") + (result.stderr or "")
+                cleaned = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', output)
+                data = json.loads(cleaned)
+                if isinstance(data, list) and data:
+                    udid = data[0].get("Identifier") or data[0].get("UniqueDeviceID")
+                    if udid:
+                        return str(udid)
+            except Exception:
+                pass
+            return None
+
         def _run_start_tunnel(mode, run_timeout):
+            cmd = [sys.executable, "-m", "pymobiledevice3", "--no-color", "remote", "start-tunnel", "--script-mode", "-t", mode]
+            if target_udid:
+                cmd += ["--udid", target_udid]
             result = subprocess.run(
-                [sys.executable, "-m", "pymobiledevice3", "--no-color", "remote", "start-tunnel", "--script-mode", "-t", mode],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=run_timeout,
@@ -617,8 +640,11 @@ class SimulatorGUI:
             return output, output_lower
 
         def _run_lockdown_start_tunnel(run_timeout):
+            cmd = [sys.executable, "-m", "pymobiledevice3", "--no-color", "lockdown", "start-tunnel", "--script-mode"]
+            if target_udid:
+                cmd += ["--udid", target_udid]
             result = subprocess.run(
-                [sys.executable, "-m", "pymobiledevice3", "--no-color", "lockdown", "start-tunnel", "--script-mode"],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=run_timeout,
@@ -636,6 +662,12 @@ class SimulatorGUI:
         connection_type = self.connection_type.get().strip().lower()
         if connection_type not in ("usb", "wifi"):
             connection_type = "usb"
+
+        target_udid = _resolve_udid()
+        if target_udid:
+            self._log(f"ℹ 使用裝置 UDID: {target_udid}")
+        else:
+            self._log("⚠ 無法從 usbmux 取得 UDID，改用預設裝置", color="orange")
 
         # 若 tunneld 剛重啟，等待最多 20 秒讓其建立新 tunnel
         wait_deadline = time.time() + 20
