@@ -945,7 +945,6 @@ class SimulatorGUI:
         elif action == 'set_mobile_touch_loop':
             enabled = data.get('enabled', False)
             interval = data.get('interval', 0.5)
-            self._log(f"📨 收到地圖手勢事件: enabled={enabled}, interval={interval}", color="blue")
             self.root.after(0, lambda: self._set_mobile_touch_loop(enabled, interval))
         else:
             lat = data.get('lat', 0)
@@ -1029,20 +1028,24 @@ class SimulatorGUI:
         enabled = bool(enabled)
 
         if enabled:
+            was_enabled = self._mobile_touch_loop_enabled
             self._mobile_touch_loop_enabled = True
             self._mobile_touch_loop_stop.clear()
-            self._ensure_wda_session()
             if not self._mobile_touch_loop_thread or not self._mobile_touch_loop_thread.is_alive():
                 self._mobile_touch_loop_thread = threading.Thread(target=self._mobile_touch_loop_worker, daemon=True)
                 self._mobile_touch_loop_thread.start()
-            self._log(f"📱 手勢循環啟用，間隔 {interval:.2f} 秒", color="blue")
+            if not was_enabled:
+                self._log(f"📱 手勢循環啟用，間隔 {interval:.2f} 秒", color="blue")
         else:
+            if not self._mobile_touch_loop_enabled:
+                return
             self._mobile_touch_loop_enabled = False
             self._mobile_touch_loop_stop.set()
             self._wda_session_id = None
             self._log("📱 手勢循環已停止", color="orange")
 
     def _mobile_touch_loop_worker(self):
+        self._ensure_wda_session()
         while not self._mobile_touch_loop_stop.is_set() and self._mobile_touch_loop_enabled:
             if not self._run_mobile_touch_sequence():
                 self._mobile_touch_loop_enabled = False
