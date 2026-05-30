@@ -512,6 +512,7 @@ class SimulatorGUI:
 
     def _kill_old_tunneld(self):
         try:
+            # 使用 netstat 查找占用 49151 端口的进程
             result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             pids = set()
             for line in result.stdout.splitlines():
@@ -519,14 +520,19 @@ class SimulatorGUI:
                     parts = line.split()
                     if parts:
                         pid = parts[-1]
-                        if pid.isdigit() and pid != "0": pids.add(pid)
+                        if pid.isdigit() and pid != "0": 
+                            pids.add(pid)
+            
             if pids:
                 for pid in pids:
-                    subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                self._log(f"🧹 已清除舊程序 (PID: {', '.join(pids)})", color="orange")
+                    try:
+                        subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    except:
+                        pass
+                self._log(f"🧹 已清除占用 49151 端口的舊進程 (PID: {', '.join(pids)})", color="orange")
                 time.sleep(1)
         except Exception as e:
-            self._log(f"⚠ 清除舊程序: {e}")
+            self._log(f"⚠ 清除舊進程: {e}")
 
     def _start_tunneld(self, force_restart=False):
         if force_restart:
@@ -760,6 +766,13 @@ class SimulatorGUI:
         self._log("🔍 偵測 RSD...", color="blue")
         def _run():
             try:
+                # 檢查當前選定的連接方式
+                connection_type = self.connection_type.get().strip().lower()
+                if connection_type == "wifi":
+                    # WiFi 模式需要額外的等待讓 tunneld 發現設備
+                    self._log(f"⏳ WiFi 模式：等待 20 秒讓 tunneld 完整掃描...", color="orange")
+                    time.sleep(20)
+                
                 self._detect_rsd_sync(15)
                 if getattr(self, '_is_auto_connecting', False):
                     self.root.after(0, self._finalize_auto_connect)
