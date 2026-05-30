@@ -673,6 +673,8 @@ class SimulatorGUI:
             self._log(f"ℹ 使用裝置 UDID: {target_udid}")
         else:
             self._log("⚠ 無法從 usbmux 取得 UDID，改用預設裝置", color="orange")
+            if connection_type == "wifi":
+                raise RuntimeError("WiFi 模式目前需先接上 USB 以建立可用 tunnel（未偵測到 USB 裝置）")
 
         # 若 tunneld 剛重啟，等待最多 20 秒讓其建立新 tunnel
         wait_deadline = time.time() + 20
@@ -684,6 +686,18 @@ class SimulatorGUI:
             time.sleep(0.5)
 
         try:
+            if connection_type == "wifi":
+                self._log("ℹ WiFi 模式先嘗試 lockdown start-tunnel（USB bootstrap）...", color="blue")
+                lockdown_output, lockdown_lower = _run_lockdown_start_tunnel(timeout)
+                if "device is not connected" in lockdown_lower:
+                    self._last_tunnel_device_not_connected = True
+                lockdown_found = _parse(lockdown_output)
+                if lockdown_found:
+                    self._last_tunnel_device_not_connected = False
+                    self._device_not_connected_count = 0
+                    self._set_rsd(lockdown_found[0], lockdown_found[1])
+                    return lockdown_found[0], int(lockdown_found[1])
+
             output, output_lower = _run_start_tunnel(connection_type, timeout)
             self._last_tunnel_device_not_connected = "device is not connected" in output_lower
             if self._last_tunnel_device_not_connected:
