@@ -28,6 +28,7 @@ class SimulatorGUI:
         self.alert_seconds = tk.StringVar(value="0")
         self.auto_reconnect = tk.BooleanVar(value=True)
         self.map_follow = tk.BooleanVar(value=True)
+        self.wda_xctrunner = tk.StringVar(value="com.facebook.WebDriverAgentRunner.xctrunner")
 
         self._updating_from_map = False
         self._should_close_browser = False
@@ -42,7 +43,7 @@ class SimulatorGUI:
         self._mobile_touch_loop_stop = threading.Event()
         self._mobile_touch_loop_thread = None
         self._wda_session_id = None
-        self._wda_xctrunner = "com.facebook.WebDriverAgentRunner.xctrunner"
+        self._wda_xctrunner_unavailable = False
         
         # 狀態控制變數
         self.tunneld_proc = None
@@ -77,6 +78,7 @@ class SimulatorGUI:
         self.start_lng.trace_add('write', self._on_coord_change)
         self.end_lat.trace_add('write', self._on_coord_change)
         self.end_lng.trace_add('write', self._on_coord_change)
+        self.wda_xctrunner.trace_add('write', self._on_wda_xctrunner_change)
 
         self.root.after(2000, self._open_map_auto)
         self.root.after(500, self._auto_connect)
@@ -272,6 +274,11 @@ class SimulatorGUI:
         ttk.Label(row2, text="Port:").pack(side='left', padx=2)
         ent_rsd_port = ttk.Entry(row2, textvariable=self.rsd_port, width=6, validate="key", validatecommand=vcmd_port)
         ent_rsd_port.pack(side='left', padx=2)
+
+        row3 = ttk.Frame(f_auto)
+        row3.pack(fill='x', pady=(4, 0))
+        ttk.Label(row3, text="WDA XCTRunner:").pack(side='left', padx=(5, 2))
+        ttk.Entry(row3, textvariable=self.wda_xctrunner, width=46).pack(side='left', padx=2)
 
         # --- 區塊 2：設定路徑與速度 ---
         f4 = ttk.LabelFrame(main_frame, text="2. 設定路徑與速度", padding=6)
@@ -1023,6 +1030,13 @@ class SimulatorGUI:
             value = 0.5
         return max(0.1, min(10.0, value))
 
+    def _on_wda_xctrunner_change(self, *args):
+        self._wda_xctrunner_unavailable = False
+        self._wda_session_id = None
+
+    def _get_wda_xctrunner(self):
+        return self.wda_xctrunner.get().strip()
+
     def _set_mobile_touch_loop(self, enabled, interval):
         interval = self._normalize_mobile_touch_interval(interval)
         self._mobile_touch_loop_interval = interval
@@ -1098,6 +1112,11 @@ class SimulatorGUI:
 
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
+            err_lower = err.lower()
+            if ('appnotinstallederror' in err_lower and 'xctrunner' in err_lower) or ('no app with bundle id' in err_lower and 'xctrunner' in err_lower):
+                self._wda_xctrunner_unavailable = True
+                if self._get_wda_xctrunner():
+                    self._log("⚠ 裝置未安裝 WebDriverAgentRunner，已停用 -xc fallback", color="orange")
             if err:
                 self._log(f"❌ WDA 指令失敗: {err}", color="red")
             return None
@@ -1107,10 +1126,10 @@ class SimulatorGUI:
         if self._wda_session_id:
             return True
 
-        outputs = [
-            self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25),
-            self._run_wda_command(["launch", "com.apple.Preferences", "-xc", self._wda_xctrunner], timeout=25)
-        ]
+        outputs = [self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25)]
+        xctrunner = self._get_wda_xctrunner()
+        if xctrunner and not self._wda_xctrunner_unavailable:
+            outputs.append(self._run_wda_command(["launch", "com.apple.Preferences", "-xc", xctrunner], timeout=25))
 
         for output in outputs:
             if not output:
@@ -1151,9 +1170,11 @@ class SimulatorGUI:
             return self._run_wda_command(args, timeout=20) is not None
 
         # 無 session 時先嘗試指定 xctrunner，再嘗試不指定
-        with_runner = args + ["-xc", self._wda_xctrunner]
-        if self._run_wda_command(with_runner, timeout=20) is not None:
-            return True
+        xctrunner = self._get_wda_xctrunner()
+        if xctrunner and not self._wda_xctrunner_unavailable:
+            with_runner = args + ["-xc", xctrunner]
+            if self._run_wda_command(with_runner, timeout=20) is not None:
+                return True
         return self._run_wda_command(args, timeout=20) is not None
 
     def _update_led(self):
@@ -1632,7 +1653,8 @@ class SimulatorGUI:
             'rsd_host': self.rsd_host.get(), 'rsd_port': self.rsd_port.get(),
             'connection_type': self.connection_type.get(),
             'speed_kmh': self.speed_kmh.get(), 'interval': self.interval.get(),
-            'alert_seconds': self.alert_seconds.get(), 'auto_reconnect': self.auto_reconnect.get()
+            'alert_seconds': self.alert_seconds.get(), 'auto_reconnect': self.auto_reconnect.get(),
+            'wda_xctrunner': self.wda_xctrunner.get()
         }
         try:
             with open(settings_file, 'w', encoding='utf-8') as f: json.dump(data, f, ensure_ascii=False, indent=2)
