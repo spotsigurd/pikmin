@@ -1,0 +1,38 @@
+                                                                                                                                                  
+ Usage: python -m pymobiledevice3 developer dvt [OPTIONS] COMMAND [ARGS]...                                                                       
+                                                                                                                                                  
+ Drive DVT instrumentation APIs (process control, metrics, traces).                                                                               
+                                                                                                                                                  
++- Options --------------------------------------------------------------------------------------------------------------------------------------+
+| --help  -h        Show this message and exit.                                                                                                  |
++------------------------------------------------------------------------------------------------------------------------------------------------+
++- Commands -------------------------------------------------------------------------------------------------------------------------------------+
+| proclist                  Show processes (with start times) via DVT.                                                                           |
+| is-running-pid            Check if a PID is currently running.                                                                                 |
+| memlimitoff               Disable jetsam memory limit for a PID.                                                                               |
+| applist                   List installed applications via DVT.                                                                                 |
+| signal                    Send a signal to a PID (choose numeric SIG or --signal-name).                                                        |
+| kill                      Kill a process by PID.                                                                                               |
+| process-id-for-bundle-id  Get PID of a bundle identifier (only returns a valid value if its running).                                          |
+| pkill                     Kill all processes containing each expression in their name.                                                         |
+| launch                    Launch a process.                                                                                                    |
+| shell                     Launch developer shell (used for pymobiledevice3 R&D)                                                                |
+| ls                        List directory                                                                                                       |
+| device-information        Print system information                                                                                             |
+| netstat                   Print information about current network activity.                                                                    |
+| screenshot                Take device screenshot                                                                                               |
+| xcuitest                  Start XCUITest                                                                                                       |
+| trace-codes               Print KDebug trace codes.                                                                                            |
+| name-for-uid              Print the assiciated username for the given uid.                                                                     |
+| name-for-gid              Print the assiciated group name for the given gid.                                                                   |
+| oslog                     Sniff device oslog (not very stable, but includes more data and normal syslog)                                       |
+| energy                    Monitor the energy consumption for given PIDs                                                                        |
+| notifications             Monitor memory and app notifications                                                                                 |
+| graphics                  Monitor graphics-related information                                                                                 |
+| har                       Enable har-logging                                                                                                   |
+| sysmon                    System monitor options.                                                                                              |
+| core-profile-session      Access tailspin features                                                                                             |
+| simulate-location         Simulate device location through DVT on iOS 17 and newer.                                                            |
+| condition                 Force predefined device conditions (network, thermal, battery) via DVT.                                              |
++------------------------------------------------------------------------------------------------------------------------------------------------+
+

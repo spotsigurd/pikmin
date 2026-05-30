@@ -246,6 +246,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var lngInput = document.getElementById('lng-input');
     var mobileLoopCheckbox = document.getElementById('mobile-loop-checkbox');
     var mobileLoopIntervalInput = document.getElementById('mobile-loop-interval');
+    var mobileLoopHeartbeatTimer = null;
 
     function normalizeMobileLoopInterval(rawValue) {
         var value = parseFloat(rawValue);
@@ -274,6 +275,16 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 
         mobileLoopCheckbox.addEventListener('change', function() {
             sendMobileLoopConfig(mobileLoopCheckbox.checked);
+            if (mobileLoopCheckbox.checked) {
+                if (mobileLoopHeartbeatTimer) clearInterval(mobileLoopHeartbeatTimer);
+                mobileLoopHeartbeatTimer = setInterval(function() {
+                    if (!mobileLoopCheckbox.checked) return;
+                    sendMobileLoopConfig(true);
+                }, 2000);
+            } else if (mobileLoopHeartbeatTimer) {
+                clearInterval(mobileLoopHeartbeatTimer);
+                mobileLoopHeartbeatTimer = null;
+            }
             updateStatus(mobileLoopCheckbox.checked ? '📱 手勢循環啟用' : '📱 手勢循環停止', mobileLoopCheckbox.checked ? '#77DD77' : '#FFB347');
         });
 
@@ -292,6 +303,10 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         });
 
         window.addEventListener('beforeunload', function() {
+            if (mobileLoopHeartbeatTimer) {
+                clearInterval(mobileLoopHeartbeatTimer);
+                mobileLoopHeartbeatTimer = null;
+            }
             if (mobileLoopCheckbox.checked) {
                 sendMobileLoopConfig(false);
             }

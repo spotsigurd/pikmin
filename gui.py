@@ -41,6 +41,7 @@ class SimulatorGUI:
         self._mobile_touch_loop_interval = 0.5
         self._mobile_touch_loop_stop = threading.Event()
         self._mobile_touch_loop_thread = None
+        self._wda_session_id = None
         
         # 狀態控制變數
         self.tunneld_proc = None
@@ -944,6 +945,7 @@ class SimulatorGUI:
         elif action == 'set_mobile_touch_loop':
             enabled = data.get('enabled', False)
             interval = data.get('interval', 0.5)
+            self._log(f"📨 收到地圖手勢事件: enabled={enabled}, interval={interval}", color="blue")
             self.root.after(0, lambda: self._set_mobile_touch_loop(enabled, interval))
         else:
             lat = data.get('lat', 0)
@@ -1029,6 +1031,7 @@ class SimulatorGUI:
         if enabled:
             self._mobile_touch_loop_enabled = True
             self._mobile_touch_loop_stop.clear()
+            self._ensure_wda_session()
             if not self._mobile_touch_loop_thread or not self._mobile_touch_loop_thread.is_alive():
                 self._mobile_touch_loop_thread = threading.Thread(target=self._mobile_touch_loop_worker, daemon=True)
                 self._mobile_touch_loop_thread.start()
@@ -1036,6 +1039,7 @@ class SimulatorGUI:
         else:
             self._mobile_touch_loop_enabled = False
             self._mobile_touch_loop_stop.set()
+            self._wda_session_id = None
             self._log("📱 手勢循環已停止", color="orange")
 
     def _mobile_touch_loop_worker(self):
@@ -1080,7 +1084,7 @@ class SimulatorGUI:
         return []
 
     def _run_wda_command(self, args, timeout=20):
-        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + args + self._build_wda_device_args()
+        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + self._build_wda_device_args() + args
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, creationflags=flags)
@@ -1095,8 +1099,31 @@ class SimulatorGUI:
             return None
         return (result.stdout or '').strip()
 
+    def _ensure_wda_session(self):
+        if self._wda_session_id:
+            return True
+
+        output = self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25)
+        if not output:
+            self._log("⚠ 無法建立 WDA session，後續將嘗試直接執行手勢", color="orange")
+            return False
+
+        m = re.search(r'"sessionId"\s*:\s*"([^"]+)"', output)
+        if not m:
+            m = re.search(r'([0-9a-fA-F\-]{10,})', output)
+        if m:
+            self._wda_session_id = m.group(1)
+            self._log(f"✅ WDA session 已建立: {self._wda_session_id}", color="green")
+            return True
+
+        self._log("⚠ WDA launch 成功但未解析到 session id", color="orange")
+        return False
+
     def _get_wda_window_size(self):
-        output = self._run_wda_command(["window-size"], timeout=15)
+        args = ["window-size"]
+        if self._wda_session_id:
+            args += ["-s", self._wda_session_id]
+        output = self._run_wda_command(args, timeout=15)
         if output:
             numbers = [int(n) for n in re.findall(r'\d+', output)]
             if len(numbers) >= 2:
@@ -1110,6 +1137,8 @@ class SimulatorGUI:
             str(int(end_x)), str(int(end_y)),
             "-d", f"{float(duration):.2f}"
         ]
+        if self._wda_session_id:
+            args += ["-s", self._wda_session_id]
         return self._run_wda_command(args, timeout=20) is not None
 
     def _update_led(self):
