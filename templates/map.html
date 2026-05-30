@@ -24,12 +24,12 @@ body{background:#FFF0F5;color:#5D4037}
 .radar-ring.delay{animation-delay:1s}
 .current-location-marker{transition:transform .5s linear !important}
 #loading-progress{color:rgba(93,64,55,.7);font-size:14px;margin-top:10px}
-#map{width:100%;height:auto;background:#FFF0F5;position:absolute;top:170px;bottom:0;left:0;right:0;z-index:1;opacity:0;transition:top 0.4s ease, opacity .5s}
+#map{width:100%;height:auto;background:#FFF0F5;position:absolute;top:205px;bottom:0;left:0;right:0;z-index:1;opacity:0;transition:top 0.4s ease, opacity .5s}
 #map.ready{opacity:1}
 #map.expanded{top:0}
-#toolbar{position:fixed;top:0;left:0;right:0;z-index:5000;height:170px;background:linear-gradient(135deg,#FFD1DC 0%,#FFF0F5 100%);padding:12px 15px;box-shadow:0 4px 6px rgba(0,0,0,.1);opacity:0;transition:top 0.4s ease, opacity .5s;pointer-events:auto}
+#toolbar{position:fixed;top:0;left:0;right:0;z-index:5000;height:205px;background:linear-gradient(135deg,#FFD1DC 0%,#FFF0F5 100%);padding:12px 15px;box-shadow:0 4px 6px rgba(0,0,0,.1);opacity:0;transition:top 0.4s ease, opacity .5s;pointer-events:auto}
 #toolbar.ready{opacity:1;display:block}
-#toolbar.collapsed{top:-170px}
+#toolbar.collapsed{top:-205px}
 #title{font-size:18px;font-weight:700;color:#5D4037;margin-bottom:6px}
 #search-container{margin-bottom:6px;display:flex;gap:10px}
 #search-box{flex:1;max-width:500px;padding:10px 15px;font-size:14px;border:2px solid #FFB6C1;border-radius:25px;background:#FFFFFF;color:#5D4037;outline:0}
@@ -42,7 +42,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 #toggle-toolbar-btn{position:fixed;top:15px;right:15px;z-index:5002;background:#FFFFFF;border:2px solid #FFB6C1;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#5D4037;box-shadow:0 2px 5px rgba(0,0,0,.1);transition:background .2s, transform 0.4s ease;padding:0}
 #toggle-toolbar-btn:hover{background:#FFD1DC}
 #toggle-toolbar-btn.collapsed{transform:rotate(180deg)}
-.search-results{position:fixed;top:180px;left:60px;max-width:500px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-height:350px;overflow-y:auto;z-index:5001;display:none}
+.search-results{position:fixed;top:215px;left:60px;max-width:500px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-height:350px;overflow-y:auto;z-index:5001;display:none}
 .info-panel{position:fixed;bottom:30px;left:15px;background:rgba(255,255,255,.92);color:#5D4037;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:bold;z-index:5001;border:2px solid #FFB6C1;box-shadow:0 4px 6px rgba(0,0,0,.1);display:none;flex-direction:column;gap:3px;pointer-events:auto;cursor:grab;user-select:none;max-width:200px}
 .info-panel:active{cursor:grabbing}
 .info-panel.show{display:flex}
@@ -73,6 +73,9 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 .coord-input-row{display:flex;gap:6px;margin-top:4px;align-items:center}
 .coord-input{width:100px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
 .coord-input:focus{border-color:#FF6B81}
+.mobile-loop-check{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#5D4037;white-space:nowrap}
+.mobile-loop-interval{width:70px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
+.mobile-loop-interval:focus{border-color:#FF6B81}
 #input-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:6000;animation:fadeIn .25s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideDown{from{transform:translateY(-40px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -131,6 +134,9 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 <input type="text" id="lat-input" class="coord-input" placeholder="緯度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
 <input type="text" id="lng-input" class="coord-input" placeholder="經度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
 <button onclick="flyToCoord()" style="padding:5px 14px;font-size:12px;">🚀 飛往</button>
+<label class="mobile-loop-check"><input type="checkbox" id="mobile-loop-checkbox"/>📱手勢循環</label>
+<span class="bm-label">⏱ 間隔(秒):</span>
+<input type="text" id="mobile-loop-interval" class="mobile-loop-interval" value="0.5"/>
 </div>
 <span id="coords">起點:尚未設定 | 終點:尚未設定</span>
 </div>
@@ -238,6 +244,61 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var bmRouteMenu = document.getElementById('bm-route-menu');
     var latInput = document.getElementById('lat-input');
     var lngInput = document.getElementById('lng-input');
+    var mobileLoopCheckbox = document.getElementById('mobile-loop-checkbox');
+    var mobileLoopIntervalInput = document.getElementById('mobile-loop-interval');
+
+    function normalizeMobileLoopInterval(rawValue) {
+        var value = parseFloat(rawValue);
+        if (!isFinite(value)) value = 0.5;
+        if (value < 0.1) value = 0.1;
+        if (value > 10) value = 10;
+        return Math.round(value * 100) / 100;
+    }
+
+    function sendMobileLoopConfig(enabled) {
+        var interval = normalizeMobileLoopInterval(mobileLoopIntervalInput ? mobileLoopIntervalInput.value : 0.5);
+        if (mobileLoopIntervalInput) {
+            mobileLoopIntervalInput.value = String(interval);
+        }
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'set_mobile_touch_loop', enabled: !!enabled, interval: interval})
+        }).catch(function() {});
+    }
+
+    function initMobileLoopControls() {
+        if (!mobileLoopCheckbox || !mobileLoopIntervalInput) return;
+        mobileLoopCheckbox.checked = false;
+        mobileLoopIntervalInput.value = '0.5';
+
+        mobileLoopCheckbox.addEventListener('change', function() {
+            sendMobileLoopConfig(mobileLoopCheckbox.checked);
+            updateStatus(mobileLoopCheckbox.checked ? '📱 手勢循環啟用' : '📱 手勢循環停止', mobileLoopCheckbox.checked ? '#77DD77' : '#FFB347');
+        });
+
+        mobileLoopIntervalInput.addEventListener('blur', function() {
+            mobileLoopIntervalInput.value = String(normalizeMobileLoopInterval(mobileLoopIntervalInput.value));
+            if (mobileLoopCheckbox.checked) {
+                sendMobileLoopConfig(true);
+            }
+        });
+
+        mobileLoopIntervalInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                mobileLoopIntervalInput.blur();
+            }
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (mobileLoopCheckbox.checked) {
+                sendMobileLoopConfig(false);
+            }
+        });
+
+        sendMobileLoopConfig(false);
+    }
 
     function disableOverlayPropagation() {
         if (typeof L === 'undefined') return;
@@ -415,6 +476,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                         }
                     });
                 }
+
+                initMobileLoopControls();
 
                 mapInitialized = true;
                 updateStatus('✅ 地圖就緒', '#0f0');

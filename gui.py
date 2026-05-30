@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, simpledialog, filedialog
 import os
 import re
@@ -36,6 +37,10 @@ class SimulatorGUI:
         self._sim_accumulated_time = 0
         self._sim_last_update_time = 0
         self._timer_after_id = None
+        self._mobile_touch_loop_enabled = False
+        self._mobile_touch_loop_interval = 0.5
+        self._mobile_touch_loop_stop = threading.Event()
+        self._mobile_touch_loop_thread = None
         
         # 狀態控制變數
         self.tunneld_proc = None
@@ -923,6 +928,10 @@ class SimulatorGUI:
             self.root.after(0, lambda: self._delete_route_confirmed(data.get('index')))
         elif action == 'toggle_pause':
             self.root.after(0, self._pause_simulation)
+        elif action == 'set_mobile_touch_loop':
+            enabled = data.get('enabled', False)
+            interval = data.get('interval', 0.5)
+            self.root.after(0, lambda: self._set_mobile_touch_loop(enabled, interval))
         else:
             lat = data.get('lat', 0)
             lng = data.get('lng', 0)
@@ -991,6 +1000,104 @@ class SimulatorGUI:
                 self._start_simulation()
             else:
                 self._log(f"🚀 模擬中...準備跳轉至路線點 {index}", color="blue")
+
+    def _normalize_mobile_touch_interval(self, value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            value = 0.5
+        return max(0.1, min(10.0, value))
+
+    def _set_mobile_touch_loop(self, enabled, interval):
+        interval = self._normalize_mobile_touch_interval(interval)
+        self._mobile_touch_loop_interval = interval
+        enabled = bool(enabled)
+
+        if enabled:
+            self._mobile_touch_loop_enabled = True
+            self._mobile_touch_loop_stop.clear()
+            if not self._mobile_touch_loop_thread or not self._mobile_touch_loop_thread.is_alive():
+                self._mobile_touch_loop_thread = threading.Thread(target=self._mobile_touch_loop_worker, daemon=True)
+                self._mobile_touch_loop_thread.start()
+            self._log(f"📱 手勢循環啟用，間隔 {interval:.2f} 秒", color="blue")
+        else:
+            self._mobile_touch_loop_enabled = False
+            self._mobile_touch_loop_stop.set()
+            self._log("📱 手勢循環已停止", color="orange")
+
+    def _mobile_touch_loop_worker(self):
+        while not self._mobile_touch_loop_stop.is_set() and self._mobile_touch_loop_enabled:
+            if not self._run_mobile_touch_sequence():
+                self._mobile_touch_loop_enabled = False
+                self._mobile_touch_loop_stop.set()
+                self._log("❌ 手勢循環執行失敗，已自動停止", color="red")
+                break
+            if self._mobile_touch_loop_stop.wait(self._mobile_touch_loop_interval):
+                break
+
+    def _run_mobile_touch_sequence(self):
+        width, height = self._get_wda_window_size()
+        center_x = int(width * 0.5)
+        tap_y = int(height * 0.45)
+        swipe_start_y = int(height * 0.35)
+        swipe_end_y = int(height * 0.75)
+        interval = self._mobile_touch_loop_interval
+
+        actions = [
+            ("點一下", center_x, tap_y, center_x, tap_y + 1, 0.03),
+            ("往下拉一下", center_x, swipe_start_y, center_x, swipe_end_y, 0.18),
+            ("再往下拉一下", center_x, swipe_start_y, center_x, swipe_end_y, 0.18)
+        ]
+
+        for idx, (label, start_x, start_y, end_x, end_y, duration) in enumerate(actions):
+            if self._mobile_touch_loop_stop.is_set() or not self._mobile_touch_loop_enabled:
+                return True
+            if not self._run_wda_swipe(start_x, start_y, end_x, end_y, duration):
+                self._log(f"❌ 手勢動作失敗: {label}", color="red")
+                return False
+            if idx < len(actions) - 1 and self._mobile_touch_loop_stop.wait(interval):
+                return True
+        return True
+
+    def _build_wda_device_args(self):
+        host = self.rsd_host.get().strip()
+        port = self.rsd_port.get().strip()
+        if host and port.isdigit():
+            return ["--rsd", host, port]
+        return []
+
+    def _run_wda_command(self, args, timeout=20):
+        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + args + self._build_wda_device_args()
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, creationflags=flags)
+        except Exception as e:
+            self._log(f"❌ 執行 WDA 指令失敗: {e}", color="red")
+            return None
+
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or '').strip()
+            if err:
+                self._log(f"❌ WDA 指令失敗: {err}", color="red")
+            return None
+        return (result.stdout or '').strip()
+
+    def _get_wda_window_size(self):
+        output = self._run_wda_command(["window-size"], timeout=15)
+        if output:
+            numbers = [int(n) for n in re.findall(r'\d+', output)]
+            if len(numbers) >= 2:
+                return numbers[0], numbers[1]
+        return 390, 844
+
+    def _run_wda_swipe(self, start_x, start_y, end_x, end_y, duration):
+        args = [
+            "swipe",
+            str(int(start_x)), str(int(start_y)),
+            str(int(end_x)), str(int(end_y)),
+            "-d", f"{float(duration):.2f}"
+        ]
+        return self._run_wda_command(args, timeout=20) is not None
 
     def _update_led(self):
         status = getattr(self.core, '_conn_status', 'disconnected')
@@ -1483,6 +1590,8 @@ class SimulatorGUI:
         if not messagebox.askyesno("確認退出", "確定要退出模擬器嗎？\n(這將中斷連線並自動關閉地圖視窗)", parent=self.root): return
         self._save_settings()
         self.core.running = False
+        self._mobile_touch_loop_enabled = False
+        self._mobile_touch_loop_stop.set()
         self._should_close_browser = True
         
         # 強制關閉獨立的瀏覽器視窗
