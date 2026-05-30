@@ -42,6 +42,7 @@ class SimulatorGUI:
         self._mobile_touch_loop_stop = threading.Event()
         self._mobile_touch_loop_thread = None
         self._wda_session_id = None
+        self._wda_xctrunner = "com.facebook.WebDriverAgentRunner.xctrunner"
         
         # 狀態控制變數
         self.tunneld_proc = None
@@ -1059,8 +1060,8 @@ class SimulatorGUI:
         width, height = self._get_wda_window_size()
         center_x = int(width * 0.5)
         tap_y = int(height * 0.45)
-        swipe_start_y = int(height * 0.35)
-        swipe_end_y = int(height * 0.75)
+        swipe_start_y = int(height * 0.20)
+        swipe_end_y = int(height * 0.88)
         interval = self._mobile_touch_loop_interval
 
         actions = [
@@ -1106,20 +1107,25 @@ class SimulatorGUI:
         if self._wda_session_id:
             return True
 
-        output = self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25)
-        if not output:
-            self._log("⚠ 無法建立 WDA session，後續將嘗試直接執行手勢", color="orange")
-            return False
+        outputs = [
+            self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25),
+            self._run_wda_command(["launch", "com.apple.Preferences", "-xc", self._wda_xctrunner], timeout=25)
+        ]
 
-        m = re.search(r'"sessionId"\s*:\s*"([^"]+)"', output)
-        if not m:
-            m = re.search(r'([0-9a-fA-F\-]{10,})', output)
-        if m:
-            self._wda_session_id = m.group(1)
-            self._log(f"✅ WDA session 已建立: {self._wda_session_id}", color="green")
-            return True
+        for output in outputs:
+            if not output:
+                continue
+            m = re.search(r'"sessionId"\s*:\s*"([^"]+)"', output)
+            if not m:
+                m = re.search(r'session\s*id\s*[:=]\s*([0-9a-zA-Z\-]+)', output, re.I)
+            if not m:
+                m = re.search(r'([0-9a-fA-F\-]{10,})', output)
+            if m:
+                self._wda_session_id = m.group(1)
+                self._log(f"✅ WDA session 已建立: {self._wda_session_id}", color="green")
+                return True
 
-        self._log("⚠ WDA launch 成功但未解析到 session id", color="orange")
+        self._log("⚠ 無法建立 WDA session，後續將嘗試直接執行手勢", color="orange")
         return False
 
     def _get_wda_window_size(self):
@@ -1142,6 +1148,12 @@ class SimulatorGUI:
         ]
         if self._wda_session_id:
             args += ["-s", self._wda_session_id]
+            return self._run_wda_command(args, timeout=20) is not None
+
+        # 無 session 時先嘗試指定 xctrunner，再嘗試不指定
+        with_runner = args + ["-xc", self._wda_xctrunner]
+        if self._run_wda_command(with_runner, timeout=20) is not None:
+            return True
         return self._run_wda_command(args, timeout=20) is not None
 
     def _update_led(self):
@@ -1447,6 +1459,10 @@ class SimulatorGUI:
         if self.core.running: self._pause_simulation()
 
     def _start_simulation(self):
+        if self.core.running:
+            self._log("⚠ 模擬已在執行中，忽略重複啟動", color="orange")
+            return
+
         if not self.rsd_host.get() or not self.rsd_port.get():
             messagebox.showerror("錯誤", "請先填入 RSD 位址")
             return
@@ -1462,8 +1478,9 @@ class SimulatorGUI:
         self.btn_start.config(state="disabled")
         self.btn_pause.config(state="normal")
         self.btn_stop.config(state="normal")
-        self._start_timer()
-        self.core.start_simulation(points, speed, ivl)
+        started = self.core.start_simulation(points, speed, ivl)
+        if started:
+            self._start_timer()
 
     def _pause_simulation(self):
         if not self.core.running: return

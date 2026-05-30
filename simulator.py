@@ -158,6 +158,7 @@ class SimulatorCore:
         self.start_position_lat = None
         self.start_position_lng = None
         self._rsd_refresh_lock = threading.Lock()
+        self._simulation_start_lock = threading.Lock()
         
         self._start_map_server()
 
@@ -194,13 +195,19 @@ class SimulatorCore:
                 continue
 
     def start_simulation(self, route_points, speed, ivl):
-        self.start_position_lat = route_points[0][0]
-        self.start_position_lng = route_points[0][1]
-        self.running = True
-        self.paused = False
-        self._stop_task = False
-        self._perform_full_cleanup = False
-        threading.Thread(target=self._run_async_simulation, args=(route_points, speed, ivl), daemon=True).start()
+        with self._simulation_start_lock:
+            if self.running:
+                self.log("⚠ 模擬已在執行中，忽略重複啟動", color="orange")
+                return False
+
+            self.start_position_lat = route_points[0][0]
+            self.start_position_lng = route_points[0][1]
+            self.running = True
+            self.paused = False
+            self._stop_task = False
+            self._perform_full_cleanup = False
+            threading.Thread(target=self._run_async_simulation, args=(route_points, speed, ivl), daemon=True).start()
+            return True
 
     def _run_async_simulation(self, route_points, speed, ivl):
         loop = asyncio.new_event_loop()
