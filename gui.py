@@ -1087,7 +1087,7 @@ class SimulatorGUI:
         return []
 
     def _run_wda_command(self, args, timeout=20):
-        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + self._build_wda_device_args() + args
+        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + args + self._build_wda_device_args()
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, creationflags=flags)
