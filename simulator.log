@@ -1,42 +1,3 @@
-=== 模擬器啟動時間: 2026-05-30 14:33:15 ===
-[2026-05-30 14:33:16] ============================================================
-[2026-05-30 14:33:16] 🎯 iPhone GPS 模擬器 v17.0 - 模組化重構版 (完整版)
-[2026-05-30 14:33:16] ============================================================
-[2026-05-30 14:33:16] ✅ 修復：阻絕競態條件造成的橡皮筋拉回現象
-[2026-05-30 14:33:16] 💡 請按 F12 打開瀏覽器控制台查看詳細日誌
-[2026-05-30 14:33:16] ⚡ 開始自動連線流程 (等待 tunneld 就緒...)
-[2026-05-30 14:33:17] 🚀 啟動 tunneld...
-[2026-05-30 14:33:17] ✅ tunneld 已啟動
-[2026-05-30 14:33:18] 🌐 地圖已自動開啟
-[2026-05-30 14:33:19] 🗖 地圖視窗已最大化
-[2026-05-30 14:33:20] 🧭 路線點: 1 個，途經點: 0 個
-[2026-05-30 14:33:21] 🧭 路線點: 2 個，途經點: 0 個
-[2026-05-30 14:33:26] [tunneld] [32m2026-05-30 14:33:26[0m [35mHA1MIS-HNB0516[0m [34mpymobiledevice3.tunneld.server[19212][0m [1;30mINFO[0m [start-tunnel-task-usbmux-00008030-000E602401E8802E-USB] Created tunnel --rsd fdf0:2f80:b2ba::1 62408
-[2026-05-30 14:33:26] ✅ RSD: fdf0:2f80:b2ba::1:62408
-[2026-05-30 14:33:26] ⚡ tunneld 已就緒，準備進行下一步...
-[2026-05-30 14:33:26] ℹ WiFi 模式略過 DDI 掛載，直接偵測 RSD
-[2026-05-30 14:33:26] ℹ RSD 已填入: fdf0:2f80:b2ba::1:62408
-[2026-05-30 14:33:26] ✅ 自動連線與偵測全部完成！
-[2026-05-30 14:33:30] 🧭 路線點: 3 個，途經點: 1 個
-[2026-05-30 14:33:34] 📏 總距離: 3493m
-[2026-05-30 14:33:34] 🚀 開始模擬
-[2026-05-30 14:33:35] [1] 24.819985,120.959636 0% 20.0km/h (1/2)
-[2026-05-30 14:33:37] ⏸ 已暫停
-[2026-05-30 14:33:43] [tunneld] [32m2026-05-30 14:33:43[0m [35mHA1MIS-HNB0516[0m [34mpymobiledevice3.tunneld.server[19212][0m [1;30mINFO[0m Disconnected from tunnel --rsd fdf0:2f80:b2ba::1 62408
-[2026-05-30 14:33:45] ⚡ 開始自動連線流程 (等待 tunneld 就緒...)
-[2026-05-30 14:33:45] 🔪 終止 tunneld 進程...
-[2026-05-30 14:33:45] 🚀 啟動 tunneld...
-[2026-05-30 14:33:46] ✅ tunneld 已啟動
-[2026-05-30 14:33:57] RSD refresh: 連線中斷或 port 可能已變更
-[2026-05-30 14:34:16] ❌ 等待 tunneld 就緒逾時，嘗試重連...
-[2026-05-30 14:34:16] 🔍 tunneld 仍在執行，嘗試透過 start-tunnel 偵測 RSD...
-[2026-05-30 14:34:16] ℹ WiFi 模式略過 DDI 掛載，直接偵測 RSD
-[2026-05-30 14:34:16] 🔍 偵測 RSD...
-[2026-05-30 14:34:19] ⚠ 無法從 usbmux 取得 UDID，改用預設裝置
-[2026-05-30 14:34:19] ❌ 偵測失敗: WiFi 模式目前需先接上 USB 以建立可用 tunnel（未偵測到 USB 裝置）
-[2026-05-30 14:34:19] ⏳ 自動連線失敗，5 秒後進行第 1/3 次重試...
-[2026-05-30 14:34:28] 🔧 執行 auto-unmount DDI...
-[2026-05-30 14:34:31] 🔪 終止 tunneld 進程...
 === 模擬器啟動時間: 2026-05-30 15:19:30 ===
 [2026-05-30 15:19:32] ============================================================
 [2026-05-30 15:19:32] 🎯 iPhone GPS 模擬器 v17.0 - 模組化重構版 (完整版)
@@ -1281,3 +1242,788 @@
 [2026-05-30 16:17:42] [399] 1.246034,103.844262 50% 20.0km/h (76/117)
 [2026-05-30 16:17:45] [400] 1.245917,103.844168 50% 20.0km/h (76/117)
 [2026-05-30 16:17:48] [401] 1.245800,103.844075 51% 20.0km/h (76/117)
+=== 模擬器啟動時間: 2026-05-30 16:19:40 ===
+[2026-05-30 16:19:41] ============================================================
+[2026-05-30 16:19:41] 🎯 iPhone GPS 模擬器 v17.0 - 模組化重構版 (完整版)
+[2026-05-30 16:19:41] ============================================================
+[2026-05-30 16:19:41] ✅ 修復：阻絕競態條件造成的橡皮筋拉回現象
+[2026-05-30 16:19:41] 💡 請按 F12 打開瀏覽器控制台查看詳細日誌
+[2026-05-30 16:19:42] ⚡ 開始自動連線流程 (等待 tunneld 就緒...)
+[2026-05-30 16:19:42] 🧹 已清除占用 49151 端口的舊進程 (PID: 20316)
+[2026-05-30 16:19:43] 🚀 啟動 tunneld...
+[2026-05-30 16:19:44] 🌐 地圖已自動開啟
+[2026-05-30 16:19:44] ✅ tunneld 已啟動
+[2026-05-30 16:19:46] 📨 收到地圖手勢事件: enabled=False, interval=0.5
+[2026-05-30 16:19:46] 📱 手勢循環已停止
+[2026-05-30 16:19:46] 🗖 地圖視窗已最大化
+[2026-05-30 16:19:50] [tunneld] [32m2026-05-30 16:19:50[0m [35mHA1MIS-HNB0516[0m [34mpymobiledevice3.tunneld.server[3076][0m [1;30mINFO[0m [start-tunnel-task-usbmux-00008030-000E602401E8802E-USB] Created tunnel --rsd fdcd:5a03:c870::1 62414
+[2026-05-30 16:19:50] ✅ RSD: fdcd:5a03:c870::1:62414
+[2026-05-30 16:19:50] ⚡ tunneld 已就緒，準備進行下一步...
+[2026-05-30 16:19:50] ℹ WiFi 模式略過 DDI 掛載，直接偵測 RSD
+[2026-05-30 16:19:50] ℹ RSD 已填入: fdcd:5a03:c870::1:62414
+[2026-05-30 16:19:50] ✅ 自動連線與偵測全部完成！
+[2026-05-30 16:19:52] 🧭 路線點: 117 個，途經點: 115 個
+[2026-05-30 16:19:59] 🚀 準備從路線點 77 開始模擬...
+[2026-05-30 16:20:01] 📏 總距離: 30539m
+[2026-05-30 16:20:02] 🚀 開始模擬
+[2026-05-30 16:20:02] [1] 1.244712,103.843649 51% 20.0km/h (78/116)
+[2026-05-30 16:20:05] [2] 1.244612,103.843537 51% 20.0km/h (78/116)
+[2026-05-30 16:20:08] [3] 1.244513,103.843425 52% 20.0km/h (78/116)
+[2026-05-30 16:20:10] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:12] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:14] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:15] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:15] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:15] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:15] [4] 1.244413,103.843313 52% 20.0km/h (78/116)
+[2026-05-30 16:20:16] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:18] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:19] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:19] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:19] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:19] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:20] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:22] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:24] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:24] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:24] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:24] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:26] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:28] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:30] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:30] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:30] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:30] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:30] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:34] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:34] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:34] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:39] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:39] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:39] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:39] ❌ 手勢動作失敗: 點一下
+[2026-05-30 16:20:39] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:39] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:39] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:39] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:40] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:20:43] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:43] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:43] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:48] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:48] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:48] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:53] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:53] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:53] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:20:59] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:20:59] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:20:59] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:05] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:05] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:05] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:05] ❌ 手勢循環執行失敗，已自動停止
+[2026-05-30 16:21:05] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:05] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:05] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:05] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:05] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:05] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:05] [5] 1.244313,103.843201 52% 20.0km/h (78/116)
+[2026-05-30 16:21:12] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:12] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:12] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:18] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:18] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:19] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:23] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:23] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:23] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:26] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:26] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:26] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:30] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:30] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:30] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:30] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:30] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:30] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:30] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:30] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:21:33] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:33] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:33] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:40] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:40] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:40] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:46] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:46] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:46] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:21:53] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:21:53] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:21:53] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:00] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:00] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:00] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:07] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:07] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:07] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:07] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:07] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:07] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:07] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:07] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:13] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:13] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:13] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:13] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:19] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:19] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:19] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:25] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:25] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:25] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:28] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:28] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:28] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:32] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:32] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:32] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:35] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:35] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:35] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:35] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:35] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:35] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:35] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:35] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:35] [6] 1.244213,103.843089 52% 20.0km/h (78/116)
+[2026-05-30 16:22:39] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:39] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:39] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:39] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:42] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:42] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:42] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:45] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:45] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:45] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:50] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:50] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:50] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:55] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:55] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:55] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:22:55] ❌ 手勢動作失敗: 點一下
+[2026-05-30 16:22:55] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:55] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:55] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:55] 📨 收到地圖手勢事件: enabled=False, interval=0.5
+[2026-05-30 16:22:55] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:22:59] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:22:59] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:22:59] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:02] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:02] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:02] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:08] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:08] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:08] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:11] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:11] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:11] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:15] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:15] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:15] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:19] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:19] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:19] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:19] ❌ 手勢循環執行失敗，已自動停止
+[2026-05-30 16:23:19] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:19] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:19] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:19] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:19] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:19] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:22] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:22] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:22] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:22] 📱 手勢循環已停止
+[2026-05-30 16:23:25] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:25] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:25] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:29] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:29] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:29] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:32] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:32] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:32] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:35] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:35] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:35] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:36] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:36] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:36] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:36] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:36] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:36] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:39] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:39] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:39] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:42] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:42] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:42] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:45] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:45] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:45] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:49] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:49] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:49] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:52] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:52] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:52] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:55] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:55] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:55] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:23:55] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:55] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:23:56] [7] 1.244114,103.842977 52% 20.0km/h (78/116)
+[2026-05-30 16:23:59] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:59] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:23:59] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:23:59] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:03] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:03] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:03] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:03] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:03] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:03] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:03] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:07] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:07] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:07] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:07] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:10] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:10] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:10] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:14] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:14] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:14] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:17] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:17] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:17] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:20] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:21] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:21] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:21] ❌ 手勢動作失敗: 點一下
+[2026-05-30 16:24:21] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:21] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:24] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:24] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:24] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:24] ❌ 手勢循環執行失敗，已自動停止
+[2026-05-30 16:24:24] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:24] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:24] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:24] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:27] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:27] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:27] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:31] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:31] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:31] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:34] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:34] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:34] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:37] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:37] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:37] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:37] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:37] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:41] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:41] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:41] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:44] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:44] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:44] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:44] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:44] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:44] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:44] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:44] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:44] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:24:44] [8] 1.244014,103.842865 52% 20.0km/h (78/116)
+[2026-05-30 16:24:48] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:48] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:48] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:48] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:52] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:52] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:52] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:55] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:55] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:55] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:24:59] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:24:59] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:24:59] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:02] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:02] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:02] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:06] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:06] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:06] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:06] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:06] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:06] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:06] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:06] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:06] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:10] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:10] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:10] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:10] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:13] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:13] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:13] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:17] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:17] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:17] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:20] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:20] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:20] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:24] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:24] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:24] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:27] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:27] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:27] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:27] ❌ 手勢動作失敗: 點一下
+[2026-05-30 16:25:27] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:27] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:27] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:27] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:27] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:31] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:31] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:31] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:35] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:35] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:35] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:38] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:38] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:38] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:41] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:41] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:41] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:45] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:45] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:45] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:45] ❌ 手勢循環執行失敗，已自動停止
+[2026-05-30 16:25:45] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:48] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:48] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:48] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:48] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:48] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:48] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:48] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:48] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:48] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:25:52] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:52] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:52] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:55] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:55] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:55] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:25:58] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:25:58] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:25:58] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:26:02] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:26:02] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:26:02] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:26:07] ❌ WDA 指令失敗: Usage: python -m pymobiledevice3 developer wda [OPTIONS] COMMAND [ARGS]...
+Try 'python -m pymobiledevice3 developer wda -h' for help.
++- Error ---------------------------------------------------------------------+
+| No such option '--rsd'.                                                     |
++-----------------------------------------------------------------------------+
+[2026-05-30 16:26:07] ⚠ 無法建立 WDA session，後續將嘗試直接執行手勢
+[2026-05-30 16:26:07] 📱 手勢循環啟用，間隔 0.50 秒
+[2026-05-30 16:26:09] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:26:09] 📨 收到地圖手勢事件: enabled=True, interval=0.5
+[2026-05-30 16:26:09] 📨 收到地圖手勢事件: enabled=True, interval=0.5
