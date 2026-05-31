@@ -73,6 +73,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 .coord-input-row{display:flex;gap:6px;margin-top:4px;align-items:center}
 .coord-input{width:100px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
 .coord-input:focus{border-color:#FF6B81}
+.speed-input{width:80px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
+.speed-input:focus{border-color:#FF6B81}
 .mobile-loop-check{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#5D4037;white-space:nowrap}
 .mobile-loop-interval{width:70px;padding:5px 8px;font-size:12px;border:2px solid #FFB6C1;border-radius:6px;background:#FFFFFF;color:#5D4037;outline:0}
 .mobile-loop-interval:focus{border-color:#FF6B81}
@@ -134,9 +136,11 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 <input type="text" id="lat-input" class="coord-input" placeholder="緯度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
 <input type="text" id="lng-input" class="coord-input" placeholder="經度" onkeypress="if(event.key==='Enter')flyToCoord()"/>
 <button onclick="flyToCoord()" style="padding:5px 14px;font-size:12px;">🚀 飛往</button>
-<label class="mobile-loop-check"><input type="checkbox" id="mobile-loop-checkbox"/>📱手勢循環</label>
-<span class="bm-label">⏱ 間隔(秒):</span>
-<input type="text" id="mobile-loop-interval" class="mobile-loop-interval" value="0.5"/>
+<span class="bm-label">⚡ 速度(km/h):</span>
+<input type="text" id="map-speed-input" class="speed-input" value="20"/>
+<label class="mobile-loop-check" style="display:none;"><input type="checkbox" id="mobile-loop-checkbox"/>📱手勢循環</label>
+<span class="bm-label" style="display:none;">⏱ 間隔(秒):</span>
+<input type="text" id="mobile-loop-interval" class="mobile-loop-interval" value="0.5" style="display:none;"/>
 </div>
 <span id="coords">起點:尚未設定 | 終點:尚未設定</span>
 </div>
@@ -246,10 +250,68 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var bmRouteMenu = document.getElementById('bm-route-menu');
     var latInput = document.getElementById('lat-input');
     var lngInput = document.getElementById('lng-input');
+    var mapSpeedInput = document.getElementById('map-speed-input');
+    var lastSyncedSpeedText = '';
     var mobileLoopCheckbox = document.getElementById('mobile-loop-checkbox');
     var mobileLoopIntervalInput = document.getElementById('mobile-loop-interval');
     var mobileLoopHeartbeatTimer = null;
     var lastMobileLoopBlockedReason = '';
+
+    function normalizeSpeedValue(rawValue, fallbackValue) {
+        var value = parseFloat(rawValue);
+        if (!isFinite(value)) value = parseFloat(fallbackValue);
+        if (!isFinite(value)) value = 20;
+        if (value < 0.1) value = 0.1;
+        if (value > 999) value = 999;
+        return Math.round(value * 100) / 100;
+    }
+
+    function formatSpeedValue(value) {
+        return String(Math.round(value * 100) / 100).replace(/\.00$/, '').replace(/(\.\d*[1-9])0$/, '$1');
+    }
+
+    function pushSpeedToPython(speedText) {
+        fetch('http://127.0.0.1:__PORT__/map_event', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'set_speed_kmh', speed_kmh: speedText})
+        }).catch(function() {});
+    }
+
+    function syncSpeedFromPython(speedText) {
+        if (!mapSpeedInput || document.activeElement === mapSpeedInput) return;
+        var normalized = normalizeSpeedValue(speedText, mapSpeedInput.value);
+        var text = formatSpeedValue(normalized);
+        mapSpeedInput.value = text;
+        lastSyncedSpeedText = text;
+    }
+
+    function initMapSpeedControl() {
+        if (!mapSpeedInput) return;
+        var normalized = normalizeSpeedValue(mapSpeedInput.value, 20);
+        var text = formatSpeedValue(normalized);
+        mapSpeedInput.value = text;
+        lastSyncedSpeedText = text;
+
+        function commitSpeed() {
+            var parsed = normalizeSpeedValue(mapSpeedInput.value, lastSyncedSpeedText || 20);
+            var nextText = formatSpeedValue(parsed);
+            mapSpeedInput.value = nextText;
+            if (nextText === lastSyncedSpeedText) return;
+            lastSyncedSpeedText = nextText;
+            pushSpeedToPython(nextText);
+            updateStatus('⚡ 速度已更新: ' + nextText + ' km/h', '#77DD77');
+        }
+
+        mapSpeedInput.addEventListener('blur', commitSpeed);
+        mapSpeedInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitSpeed();
+                mapSpeedInput.blur();
+            }
+        });
+    }
 
     function normalizeMobileLoopInterval(rawValue) {
         var value = parseFloat(rawValue);
@@ -511,6 +573,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 }
 
                 initMobileLoopControls();
+                initMapSpeedControl();
 
                 mapInitialized = true;
                 updateStatus('✅ 地圖就緒', '#0f0');
@@ -1776,6 +1839,10 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 return r.json(); 
             })
             .then(function(d) {
+                if (typeof d.speed_kmh !== 'undefined') {
+                    syncSpeedFromPython(d.speed_kmh);
+                }
+
                 if (d.mobile_touch_blocked) {
                     stopMobileLoopUi(d.mobile_touch_reason || '裝置未安裝 WebDriverAgentRunner');
                 } else if (!d.mobile_touch_blocked) {

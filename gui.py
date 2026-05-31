@@ -953,6 +953,9 @@ class SimulatorGUI:
             self.root.after(0, lambda: self._delete_route_confirmed(data.get('index')))
         elif action == 'toggle_pause':
             self.root.after(0, self._pause_simulation)
+        elif action == 'set_speed_kmh':
+            speed_kmh = data.get('speed_kmh')
+            self.root.after(0, lambda: self._set_speed_from_map(speed_kmh))
         elif action == 'set_mobile_touch_loop':
             enabled = data.get('enabled', False)
             interval = data.get('interval', 0.5)
@@ -1032,6 +1035,23 @@ class SimulatorGUI:
         except (TypeError, ValueError):
             value = 0.5
         return max(0.1, min(10.0, value))
+
+    def _normalize_speed_kmh(self, value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
+        return max(0.1, min(999.0, value))
+
+    def _set_speed_from_map(self, value):
+        normalized = self._normalize_speed_kmh(value)
+        if normalized is None:
+            return
+        speed_text = f"{normalized:.2f}".rstrip('0').rstrip('.')
+        if self.speed_kmh.get().strip() == speed_text:
+            return
+        self.speed_kmh.set(speed_text)
+        self._log(f"⚡ 地圖速度已同步: {speed_text} km/h", color="blue")
 
     def _on_wda_xctrunner_change(self, *args):
         self._wda_xctrunner_unavailable = False

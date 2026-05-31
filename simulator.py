@@ -18,8 +18,9 @@ class MapServer(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             if self.path == '/current_pos':
-                data = {'active': False, 'lat': 0, 'lng': 0}
+                data = {'active': False, 'lat': 0, 'lng': 0, 'speed_kmh': ''}
                 if self.app_core and self.app_core.gui:
+                    data['speed_kmh'] = self.app_core.gui.speed_kmh.get()
                     data['mobile_touch_blocked'] = bool(getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', ''))
                     data['mobile_touch_reason'] = getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '')
                 if self.app_core and (self.app_core.running or self.app_core.holding) and len(self.app_core.get_route_points_snapshot()) >= 2:
@@ -31,6 +32,7 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                             'segment_index': getattr(self.app_core, '_current_segment_index', 1),
                             'dist_str': self.app_core.current_dist_str, 'eta_str': self.app_core.current_eta_str,
                             'bearing': self.app_core.current_bearing,
+                            'speed_kmh': self.app_core.gui.speed_kmh.get() if self.app_core.gui else '',
                             'mobile_touch_blocked': bool(getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '')) if self.app_core.gui else False,
                             'mobile_touch_reason': getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '') if self.app_core.gui else ''
                         }
