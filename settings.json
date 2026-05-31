@@ -1,6 +1,6 @@
 {
-  "rsd_host": "fd1f:d2a7:53b4::1",
-  "rsd_port": "53792",
+  "rsd_host": "fdec:81f5:bbe8::1",
+  "rsd_port": "62428",
   "connection_type": "wifi",
   "speed_kmh": "18",
   "interval": "3",

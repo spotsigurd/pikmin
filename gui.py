@@ -945,12 +945,17 @@ class SimulatorGUI:
             self.root.after(0, lambda: self._bookmark_location(lat=data.get('lat'), lng=data.get('lng'), description=data.get('description')))
         elif action == 'bookmark_route':
             self.root.after(0, lambda: self._bookmark_route(description=data.get('description')))
+        elif action == 'overwrite_bookmark_route':
+            self.root.after(0, lambda: self._bookmark_route(description=data.get('description'), route_index=data.get('route_index')))
         elif action == 'delete_bookmark_location':
             self.root.after(0, lambda: self._delete_bookmark_confirmed(data.get('line')))
         elif action == 'delete_bookmark_route':
             self.root.after(0, lambda: self._delete_route_confirmed(data.get('index')))
         elif action == 'toggle_pause':
             self.root.after(0, self._pause_simulation)
+        elif action == 'set_speed_kmh':
+            speed_kmh = data.get('speed_kmh')
+            self.root.after(0, lambda: self._set_speed_from_map(speed_kmh))
         elif action == 'set_mobile_touch_loop':
             enabled = data.get('enabled', False)
             interval = data.get('interval', 0.5)
@@ -1030,6 +1035,23 @@ class SimulatorGUI:
         except (TypeError, ValueError):
             value = 0.5
         return max(0.1, min(10.0, value))
+
+    def _normalize_speed_kmh(self, value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
+        return max(0.1, min(999.0, value))
+
+    def _set_speed_from_map(self, value):
+        normalized = self._normalize_speed_kmh(value)
+        if normalized is None:
+            return
+        speed_text = f"{normalized:.2f}".rstrip('0').rstrip('.')
+        if self.speed_kmh.get().strip() == speed_text:
+            return
+        self.speed_kmh.set(speed_text)
+        self._log(f"⚡ 地圖速度已同步: {speed_text} km/h", color="blue")
 
     def _on_wda_xctrunner_change(self, *args):
         self._wda_xctrunner_unavailable = False
@@ -1360,7 +1382,7 @@ class SimulatorGUI:
         except Exception as e:
             self._log(f"❌ 刪除路徑失敗: {e}", color="red")
 
-    def _bookmark_route(self, event=None, description=None):
+    def _bookmark_route(self, event=None, description=None, route_index=None):
         points = self.core.get_route_points_snapshot()
         if len(points) < 2:
             try: points = [(float(self.start_lat.get()), float(self.start_lng.get())), (float(self.end_lat.get()), float(self.end_lng.get()))]
@@ -1380,11 +1402,26 @@ class SimulatorGUI:
             try:
                 with open(routes_file, 'r', encoding='utf-8') as f: routes_data = json.load(f)
             except Exception: pass
-                
-        routes_data.append({"timestamp": time.strftime('%Y-%m-%d %H:%M:%S'), "description": desc, "points": points})
+
+        target_index = None
+        try:
+            if route_index is not None:
+                target_index = int(route_index)
+        except (TypeError, ValueError):
+            target_index = None
+
+        if target_index is not None and 0 <= target_index < len(routes_data):
+            routes_data[target_index]["timestamp"] = time.strftime('%Y-%m-%d %H:%M:%S')
+            routes_data[target_index]["description"] = desc
+            routes_data[target_index]["points"] = points
+            log_msg = f"🛠️ 已更新路徑: {desc}"
+        else:
+            routes_data.append({"timestamp": time.strftime('%Y-%m-%d %H:%M:%S'), "description": desc, "points": points})
+            log_msg = f"🛣️ 已收藏路徑: {desc}"
+
         try:
             with open(routes_file, 'w', encoding='utf-8') as f: json.dump(routes_data, f, ensure_ascii=False, indent=2)
-            self._log(f"🛣️ 已收藏路徑: {desc}", color="green")
+            self._log(log_msg, color="green")
             self._load_routes()
         except Exception as e:
             self._log(f"❌ 收藏路徑失敗: {e}", color="red")
