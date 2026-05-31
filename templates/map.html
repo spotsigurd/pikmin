@@ -228,6 +228,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var serverDead = false;
     var traveledLine = null;
     var remainingLine = null;
+    var selectedRouteBookmarkIndex = null;
+    var selectedRouteBookmarkDescription = '';
     
     var loadingScreen = document.getElementById('loading-screen');
     var loadingProgress = document.getElementById('loading-progress');
@@ -588,7 +590,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 hoverMarker = null;
             }
             // 使用自定義模態框取代原生 prompt
-            window.showInputModal('🛣️ 收藏路徑', '', function(desc) {
+            window.showInputModal('🛣️ 收藏路徑', selectedRouteBookmarkDescription || '', function(desc) {
                 if (desc === null) return; // 取消
                 desc = desc.trim();
                 window.bookmarkRoute(desc);
@@ -1108,6 +1110,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         endPos = null;
         lastCurPos = null;
         lastSegmentIndex = 0;
+        selectedRouteBookmarkIndex = null;
+        selectedRouteBookmarkDescription = '';
 
         updateCoordsDisplay();
         sendToPython('clear', 0, 0);
@@ -1414,13 +1418,24 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
 
     window.bookmarkRoute = function(desc) {
         if (map) map.closePopup();
+        var payload = null;
+        if (selectedRouteBookmarkIndex !== null) {
+            var overwriteDesc = (desc || '').trim();
+            if (!overwriteDesc) overwriteDesc = selectedRouteBookmarkDescription || '';
+            payload = {action: 'overwrite_bookmark_route', route_index: selectedRouteBookmarkIndex, description: overwriteDesc};
+        } else {
+            payload = {action: 'bookmark_route', description: desc || ''};
+        }
         fetch('http://127.0.0.1:__PORT__/map_event', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({action: 'bookmark_route', description: desc || ''})
+            body: JSON.stringify(payload)
         }).then(function() {
+            if (selectedRouteBookmarkIndex !== null && payload.description) {
+                selectedRouteBookmarkDescription = payload.description;
+            }
             pollBookmarks(true);
-            updateStatus('🛣️ 已收藏路徑', '#77DD77');
+            updateStatus(selectedRouteBookmarkIndex !== null ? '🛠️ 已覆蓋收藏路徑' : '🛣️ 已收藏路徑', '#77DD77');
         }).catch(function() {});
     };
 
@@ -1510,6 +1525,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         try {
             console.log('[onBookmarkLocationSelect] value:', value);
             var data = JSON.parse(value);
+            selectedRouteBookmarkIndex = null;
+            selectedRouteBookmarkDescription = '';
             console.log('[onBookmarkLocationSelect] parsed lat:', data.lat, 'lng:', data.lng);
             routePoints = [
                 {lat: data.lat, lng: data.lng},
@@ -1552,6 +1569,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         try {
             console.log('[onBookmarkRouteSelect] value:', value);
             var data = JSON.parse(value);
+            selectedRouteBookmarkIndex = (typeof data.index === 'number') ? data.index : null;
+            selectedRouteBookmarkDescription = data.description || '';
             var pts = data.points || [];
             console.log('[onBookmarkRouteSelect] pts.length:', pts.length);
             if (pts.length >= 2) {
@@ -1583,6 +1602,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({action: 'delete_bookmark_route', index: data.index})
             }).then(function() {
+                selectedRouteBookmarkIndex = null;
+                selectedRouteBookmarkDescription = '';
                 if (bmRouteButton) bmRouteButton.textContent = '📂 我的路徑';
                 if (bmRouteDropdown) bmRouteDropdown.classList.remove('open');
                 setTimeout(function() { pollBookmarks(true); }, 150);
