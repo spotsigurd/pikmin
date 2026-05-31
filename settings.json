@@ -2,7 +2,7 @@
   "rsd_host": "",
   "rsd_port": "",
   "connection_type": "wifi",
-  "speed_kmh": "20",
+  "speed_kmh": "18",
   "interval": "3",
   "alert_seconds": "0",
   "auto_reconnect": true,
