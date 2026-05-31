@@ -472,16 +472,35 @@ class SimulatorCore:
                                         latest_points = self.get_route_points_snapshot()
                                         if latest_points != route_points:
                                             if len(latest_points) >= 2:
+                                                old_points = route_points
+                                                old_len = len(old_points)
                                                 route_points = latest_points
-                                                segment_index = 1
+
+                                                # 若是「在原終點後追加新終點/路徑」，則從目前位置續走，不回起點
+                                                is_tail_extension = (
+                                                    old_len >= 2 and
+                                                    len(route_points) > old_len and
+                                                    route_points[:old_len] == old_points
+                                                )
+
+                                                if is_tail_extension:
+                                                    segment_index = old_len
+                                                    dist_done = sum(
+                                                        haversine(route_points[i][0], route_points[i][1], route_points[i + 1][0], route_points[i + 1][1])
+                                                        for i in range(old_len - 1)
+                                                    )
+                                                    total_dist = _remaining_total_from_current(route_points, segment_index, cur_lat, cur_lng, dist_done)
+                                                else:
+                                                    segment_index = 1
+                                                    cur_lat, cur_lng = route_points[0]
+                                                    self.current_lat, self.current_lng = cur_lat, cur_lng
+                                                    dist_done = 0.0
+                                                    total_dist = sum(haversine(a[0], a[1], b[0], b[1]) for a, b in zip(route_points, route_points[1:]))
+
                                                 self._current_segment_index = segment_index
-                                                cur_lat, cur_lng = route_points[0]
-                                                self.current_lat, self.current_lng = cur_lat, cur_lng
-                                                dist_done = 0.0
                                                 finished = False
                                                 self.holding = False
                                                 alert_triggered = False
-                                                total_dist = sum(haversine(a[0], a[1], b[0], b[1]) for a, b in zip(route_points, route_points[1:]))
                                                 if self.gui: self.gui.root.after(0, self.gui._resume_timer)
                                                 break
                                         
