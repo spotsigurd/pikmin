@@ -247,6 +247,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var mobileLoopCheckbox = document.getElementById('mobile-loop-checkbox');
     var mobileLoopIntervalInput = document.getElementById('mobile-loop-interval');
     var mobileLoopHeartbeatTimer = null;
+    var lastMobileLoopBlockedReason = '';
 
     function normalizeMobileLoopInterval(rawValue) {
         var value = parseFloat(rawValue);
@@ -310,6 +311,21 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             if (mobileLoopCheckbox.checked) {
                 sendMobileLoopConfig(false);
             }
+
+    function stopMobileLoopUi(reason) {
+        if (mobileLoopHeartbeatTimer) {
+            clearInterval(mobileLoopHeartbeatTimer);
+            mobileLoopHeartbeatTimer = null;
+        }
+        if (mobileLoopCheckbox) {
+            mobileLoopCheckbox.checked = false;
+        }
+        if (reason && reason !== lastMobileLoopBlockedReason) {
+            lastMobileLoopBlockedReason = reason;
+            updateStatus('⚠ ' + reason, '#FF6961');
+            alert('⚠ 手勢循環已停用\n' + reason);
+        }
+    }
         });
 
         sendMobileLoopConfig(false);
@@ -1774,6 +1790,12 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 return r.json(); 
             })
             .then(function(d) {
+                if (d.mobile_touch_blocked) {
+                    stopMobileLoopUi(d.mobile_touch_reason || '裝置未安裝 WebDriverAgentRunner');
+                } else if (!d.mobile_touch_blocked) {
+                    lastMobileLoopBlockedReason = '';
+                }
+
                 if (d.active && map && routePoints.length >= 2) {
                     var pos = [d.lat, d.lng];
                     lastCurPos = {lat: d.lat, lng: d.lng};

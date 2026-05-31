@@ -19,6 +19,9 @@ class MapServer(http.server.BaseHTTPRequestHandler):
         try:
             if self.path == '/current_pos':
                 data = {'active': False, 'lat': 0, 'lng': 0}
+                if self.app_core and self.app_core.gui:
+                    data['mobile_touch_blocked'] = bool(getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', ''))
+                    data['mobile_touch_reason'] = getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '')
                 if self.app_core and (self.app_core.running or self.app_core.holding) and len(self.app_core.get_route_points_snapshot()) >= 2:
                     if self.app_core.current_lat is not None:
                         follow_state = self.app_core.gui.map_follow.get() if self.app_core.gui else False
@@ -27,7 +30,9 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                             'follow': follow_state, 'paused': self.app_core.paused,
                             'segment_index': getattr(self.app_core, '_current_segment_index', 1),
                             'dist_str': self.app_core.current_dist_str, 'eta_str': self.app_core.current_eta_str,
-                            'bearing': self.app_core.current_bearing
+                            'bearing': self.app_core.current_bearing,
+                            'mobile_touch_blocked': bool(getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '')) if self.app_core.gui else False,
+                            'mobile_touch_reason': getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '') if self.app_core.gui else ''
                         }
                 self._json(data)
             elif self.path == '/route_points':

@@ -44,6 +44,7 @@ class SimulatorGUI:
         self._mobile_touch_loop_thread = None
         self._wda_session_id = None
         self._wda_xctrunner_unavailable = False
+        self._mobile_touch_loop_blocked_reason = ""
         
         # 狀態控制變數
         self.tunneld_proc = None
@@ -1033,6 +1034,7 @@ class SimulatorGUI:
     def _on_wda_xctrunner_change(self, *args):
         self._wda_xctrunner_unavailable = False
         self._wda_session_id = None
+        self._mobile_touch_loop_blocked_reason = ""
 
     def _get_wda_xctrunner(self):
         return self.wda_xctrunner.get().strip()
@@ -1043,6 +1045,10 @@ class SimulatorGUI:
         enabled = bool(enabled)
 
         if enabled:
+            if self._mobile_touch_loop_blocked_reason:
+                self._mobile_touch_loop_enabled = False
+                self._mobile_touch_loop_stop.set()
+                return
             was_enabled = self._mobile_touch_loop_enabled
             self._mobile_touch_loop_enabled = True
             self._mobile_touch_loop_stop.clear()
@@ -1058,6 +1064,17 @@ class SimulatorGUI:
             self._mobile_touch_loop_stop.set()
             self._wda_session_id = None
             self._log("📱 手勢循環已停止", color="orange")
+
+    def _block_mobile_touch_loop(self, reason):
+        if not reason:
+            return
+        if self._mobile_touch_loop_blocked_reason == reason:
+            return
+        self._mobile_touch_loop_blocked_reason = reason
+        self._mobile_touch_loop_enabled = False
+        self._mobile_touch_loop_stop.set()
+        self._wda_session_id = None
+        self._log(f"⚠ {reason}", color="orange")
 
     def _mobile_touch_loop_worker(self):
         self._ensure_wda_session()
@@ -1117,6 +1134,7 @@ class SimulatorGUI:
                 self._wda_xctrunner_unavailable = True
                 if self._get_wda_xctrunner():
                     self._log("⚠ 裝置未安裝 WebDriverAgentRunner，已停用 -xc fallback", color="orange")
+                self._block_mobile_touch_loop("未偵測到可用的 WDA Runner，已自動停用手勢循環（請先安裝 WebDriverAgentRunner）")
             if err:
                 self._log(f"❌ WDA 指令失敗: {err}", color="red")
             return None
