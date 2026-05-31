@@ -440,8 +440,8 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         if (toolbarElement) toolbarElement.classList.add('ready');
     }
 
-    window.toggleFollow = function() {
-        mapFollow = !mapFollow;
+    function setFollowState(enabled) {
+        mapFollow = !!enabled;
         var btn = document.getElementById('follow-btn');
         if (btn) {
             if (mapFollow) {
@@ -452,6 +452,10 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 btn.style.background = '#FFFFFF';
             }
         }
+    }
+
+    window.toggleFollow = function() {
+        setFollowState(!mapFollow);
     };
 
     window.toggleToolbar = function() {
@@ -554,12 +558,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 // 使用者手動拖曳地圖時自動關閉跟隨模式
                 map.on('dragstart', function() {
                     if (mapFollow) {
-                        mapFollow = false;
-                        var btn = document.getElementById('follow-btn');
-                        if (btn) {
-                            btn.textContent = '🎯跟隨: 關';
-                            btn.style.background = '#FFFFFF';
-                        }
+                        setFollowState(false);
                         console.log('🔄 使用者拖曳地圖，跟隨模式已自動關閉');
                     }
                 });
@@ -1063,6 +1062,12 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     function selectSearchResult(result) {
         console.log('=== 選擇搜尋結果 ===');
         console.log('地點:', result.display_name);
+
+        // 搜尋時若仍開啟跟隨，會被目前位置輪詢拉回；先自動關閉
+        if (mapFollow) {
+            setFollowState(false);
+            updateStatus('🔎 搜尋時已暫時關閉跟隨', '#FFB347');
+        }
         
         var lat = parseFloat(result.lat);
         var lng = parseFloat(result.lon);

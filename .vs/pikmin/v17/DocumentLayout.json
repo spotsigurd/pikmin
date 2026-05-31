@@ -341,9 +341,10 @@
               "RelativeDocumentMoniker": "simulator.py",
               "ToolTip": "D:\\test\\pikmin\\simulator.py",
               "RelativeToolTip": "simulator.py",
-              "ViewState": "AgIAABQAAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAPgBAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2026-05-29T12:54:03.355Z"
+              "WhenOpened": "2026-05-29T12:54:03.355Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
