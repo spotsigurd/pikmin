@@ -8,3 +8,5 @@
 !*.json
 !*.txt
 !*.log
+!*.ps1
+!.gitattributes

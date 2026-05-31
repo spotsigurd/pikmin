@@ -19,6 +19,9 @@ class MapServer(http.server.BaseHTTPRequestHandler):
         try:
             if self.path == '/current_pos':
                 data = {'active': False, 'lat': 0, 'lng': 0}
+                if self.app_core and self.app_core.gui:
+                    data['mobile_touch_blocked'] = bool(getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', ''))
+                    data['mobile_touch_reason'] = getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '')
                 if self.app_core and (self.app_core.running or self.app_core.holding) and len(self.app_core.get_route_points_snapshot()) >= 2:
                     if self.app_core.current_lat is not None:
                         follow_state = self.app_core.gui.map_follow.get() if self.app_core.gui else False
@@ -27,7 +30,9 @@ class MapServer(http.server.BaseHTTPRequestHandler):
                             'follow': follow_state, 'paused': self.app_core.paused,
                             'segment_index': getattr(self.app_core, '_current_segment_index', 1),
                             'dist_str': self.app_core.current_dist_str, 'eta_str': self.app_core.current_eta_str,
-                            'bearing': self.app_core.current_bearing
+                            'bearing': self.app_core.current_bearing,
+                            'mobile_touch_blocked': bool(getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '')) if self.app_core.gui else False,
+                            'mobile_touch_reason': getattr(self.app_core.gui, '_mobile_touch_loop_blocked_reason', '') if self.app_core.gui else ''
                         }
                 self._json(data)
             elif self.path == '/route_points':
@@ -158,6 +163,7 @@ class SimulatorCore:
         self.start_position_lat = None
         self.start_position_lng = None
         self._rsd_refresh_lock = threading.Lock()
+        self._simulation_start_lock = threading.Lock()
         
         self._start_map_server()
 
@@ -194,13 +200,19 @@ class SimulatorCore:
                 continue
 
     def start_simulation(self, route_points, speed, ivl):
-        self.start_position_lat = route_points[0][0]
-        self.start_position_lng = route_points[0][1]
-        self.running = True
-        self.paused = False
-        self._stop_task = False
-        self._perform_full_cleanup = False
-        threading.Thread(target=self._run_async_simulation, args=(route_points, speed, ivl), daemon=True).start()
+        with self._simulation_start_lock:
+            if self.running:
+                self.log("⚠ 模擬已在執行中，忽略重複啟動", color="orange")
+                return False
+
+            self.start_position_lat = route_points[0][0]
+            self.start_position_lng = route_points[0][1]
+            self.running = True
+            self.paused = False
+            self._stop_task = False
+            self._perform_full_cleanup = False
+            threading.Thread(target=self._run_async_simulation, args=(route_points, speed, ivl), daemon=True).start()
+            return True
 
     def _run_async_simulation(self, route_points, speed, ivl):
         loop = asyncio.new_event_loop()

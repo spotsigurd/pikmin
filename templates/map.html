@@ -247,6 +247,7 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
     var mobileLoopCheckbox = document.getElementById('mobile-loop-checkbox');
     var mobileLoopIntervalInput = document.getElementById('mobile-loop-interval');
     var mobileLoopHeartbeatTimer = null;
+    var lastMobileLoopBlockedReason = '';
 
     function normalizeMobileLoopInterval(rawValue) {
         var value = parseFloat(rawValue);
@@ -310,6 +311,21 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             if (mobileLoopCheckbox.checked) {
                 sendMobileLoopConfig(false);
             }
+
+    function stopMobileLoopUi(reason) {
+        if (mobileLoopHeartbeatTimer) {
+            clearInterval(mobileLoopHeartbeatTimer);
+            mobileLoopHeartbeatTimer = null;
+        }
+        if (mobileLoopCheckbox) {
+            mobileLoopCheckbox.checked = false;
+        }
+        if (reason && reason !== lastMobileLoopBlockedReason) {
+            lastMobileLoopBlockedReason = reason;
+            updateStatus('⚠ ' + reason, '#FF6961');
+            alert('⚠ 手勢循環已停用\n' + reason);
+        }
+    }
         });
 
         sendMobileLoopConfig(false);
@@ -1389,6 +1405,9 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({action: 'bookmark_location', lat: lat, lng: lng, description: desc})
+            }).then(function() {
+                pollBookmarks(true);
+                updateStatus('🔖 已收藏地點', '#77DD77');
             }).catch(function() {});
         });
     };
@@ -1399,6 +1418,9 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'bookmark_route', description: desc || ''})
+        }).then(function() {
+            pollBookmarks(true);
+            updateStatus('🛣️ 已收藏路徑', '#77DD77');
         }).catch(function() {});
     };
 
@@ -1608,47 +1630,6 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
         });
     }
 
-    function pollBookmarks(refreshNow) {
-        if (!mapInitialized || !map) {
-            setTimeout(pollBookmarks, 2000);
-            return;
-        }
-        items.forEach(function(item) {
-            var text = textFn(item);
-            var row = document.createElement('div');
-            row.className = 'bm-option';
-
-            var main = document.createElement('button');
-            main.type = 'button';
-            main.className = 'bm-option-main';
-            main.textContent = text;
-            main.title = text;
-            main.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropdownEl.classList.remove('open');
-                valueFn(item);
-            });
-
-            var del = document.createElement('button');
-            del.type = 'button';
-            del.className = 'bm-option-delete';
-            del.textContent = '🗑️';
-            del.title = '刪除';
-            del.setAttribute('aria-label', '刪除');
-            del.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropdownEl.classList.remove('open');
-                deleteFn(item);
-            });
-
-            row.appendChild(main);
-            row.appendChild(del);
-            menu.appendChild(row);
-        });
-    }
-
     function refreshBookmarks() {
         // poll locations
         fetch('http://127.0.0.1:__PORT__/bookmarks')
@@ -1691,14 +1672,14 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
             }).catch(function() {});
     }
 
-    function pollBookmarks() {
+    function pollBookmarks(refreshNow) {
         if (!mapInitialized || !map) {
-            setTimeout(pollBookmarks, 2000);
+            setTimeout(function() { pollBookmarks(false); }, 2000);
             return;
         }
         refreshBookmarks();
         // re-poll every 5 seconds to stay in sync
-        if (!refreshNow) setTimeout(pollBookmarks, 5000);
+        if (!refreshNow) setTimeout(function() { pollBookmarks(false); }, 5000);
     }
 
     function syncRouteToPython() {
@@ -1774,6 +1755,12 @@ button{padding:6px 14px;border-radius:6px;font-size:12px;margin-right:8px;border
                 return r.json(); 
             })
             .then(function(d) {
+                if (d.mobile_touch_blocked) {
+                    stopMobileLoopUi(d.mobile_touch_reason || '裝置未安裝 WebDriverAgentRunner');
+                } else if (!d.mobile_touch_blocked) {
+                    lastMobileLoopBlockedReason = '';
+                }
+
                 if (d.active && map && routePoints.length >= 2) {
                     var pos = [d.lat, d.lng];
                     lastCurPos = {lat: d.lat, lng: d.lng};

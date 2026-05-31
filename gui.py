@@ -28,6 +28,7 @@ class SimulatorGUI:
         self.alert_seconds = tk.StringVar(value="0")
         self.auto_reconnect = tk.BooleanVar(value=True)
         self.map_follow = tk.BooleanVar(value=True)
+        self.wda_xctrunner = tk.StringVar(value="com.facebook.WebDriverAgentRunner.xctrunner")
 
         self._updating_from_map = False
         self._should_close_browser = False
@@ -42,6 +43,8 @@ class SimulatorGUI:
         self._mobile_touch_loop_stop = threading.Event()
         self._mobile_touch_loop_thread = None
         self._wda_session_id = None
+        self._wda_xctrunner_unavailable = False
+        self._mobile_touch_loop_blocked_reason = ""
         
         # 狀態控制變數
         self.tunneld_proc = None
@@ -76,6 +79,7 @@ class SimulatorGUI:
         self.start_lng.trace_add('write', self._on_coord_change)
         self.end_lat.trace_add('write', self._on_coord_change)
         self.end_lng.trace_add('write', self._on_coord_change)
+        self.wda_xctrunner.trace_add('write', self._on_wda_xctrunner_change)
 
         self.root.after(2000, self._open_map_auto)
         self.root.after(500, self._auto_connect)
@@ -271,6 +275,11 @@ class SimulatorGUI:
         ttk.Label(row2, text="Port:").pack(side='left', padx=2)
         ent_rsd_port = ttk.Entry(row2, textvariable=self.rsd_port, width=6, validate="key", validatecommand=vcmd_port)
         ent_rsd_port.pack(side='left', padx=2)
+
+        row3 = ttk.Frame(f_auto)
+        row3.pack(fill='x', pady=(4, 0))
+        ttk.Label(row3, text="WDA XCTRunner:").pack(side='left', padx=(5, 2))
+        ttk.Entry(row3, textvariable=self.wda_xctrunner, width=46).pack(side='left', padx=2)
 
         # --- 區塊 2：設定路徑與速度 ---
         f4 = ttk.LabelFrame(main_frame, text="2. 設定路徑與速度", padding=6)
@@ -1022,12 +1031,24 @@ class SimulatorGUI:
             value = 0.5
         return max(0.1, min(10.0, value))
 
+    def _on_wda_xctrunner_change(self, *args):
+        self._wda_xctrunner_unavailable = False
+        self._wda_session_id = None
+        self._mobile_touch_loop_blocked_reason = ""
+
+    def _get_wda_xctrunner(self):
+        return self.wda_xctrunner.get().strip()
+
     def _set_mobile_touch_loop(self, enabled, interval):
         interval = self._normalize_mobile_touch_interval(interval)
         self._mobile_touch_loop_interval = interval
         enabled = bool(enabled)
 
         if enabled:
+            if self._mobile_touch_loop_blocked_reason:
+                self._mobile_touch_loop_enabled = False
+                self._mobile_touch_loop_stop.set()
+                return
             was_enabled = self._mobile_touch_loop_enabled
             self._mobile_touch_loop_enabled = True
             self._mobile_touch_loop_stop.clear()
@@ -1044,6 +1065,17 @@ class SimulatorGUI:
             self._wda_session_id = None
             self._log("📱 手勢循環已停止", color="orange")
 
+    def _block_mobile_touch_loop(self, reason):
+        if not reason:
+            return
+        if self._mobile_touch_loop_blocked_reason == reason:
+            return
+        self._mobile_touch_loop_blocked_reason = reason
+        self._mobile_touch_loop_enabled = False
+        self._mobile_touch_loop_stop.set()
+        self._wda_session_id = None
+        self._log(f"⚠ {reason}", color="orange")
+
     def _mobile_touch_loop_worker(self):
         self._ensure_wda_session()
         while not self._mobile_touch_loop_stop.is_set() and self._mobile_touch_loop_enabled:
@@ -1059,8 +1091,8 @@ class SimulatorGUI:
         width, height = self._get_wda_window_size()
         center_x = int(width * 0.5)
         tap_y = int(height * 0.45)
-        swipe_start_y = int(height * 0.35)
-        swipe_end_y = int(height * 0.75)
+        swipe_start_y = int(height * 0.20)
+        swipe_end_y = int(height * 0.88)
         interval = self._mobile_touch_loop_interval
 
         actions = [
@@ -1087,7 +1119,7 @@ class SimulatorGUI:
         return []
 
     def _run_wda_command(self, args, timeout=20):
-        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + self._build_wda_device_args() + args
+        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + args + self._build_wda_device_args()
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, creationflags=flags)
@@ -1097,6 +1129,12 @@ class SimulatorGUI:
 
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
+            err_lower = err.lower()
+            if ('appnotinstallederror' in err_lower and 'xctrunner' in err_lower) or ('no app with bundle id' in err_lower and 'xctrunner' in err_lower):
+                self._wda_xctrunner_unavailable = True
+                if self._get_wda_xctrunner():
+                    self._log("⚠ 裝置未安裝 WebDriverAgentRunner，已停用 -xc fallback", color="orange")
+                self._block_mobile_touch_loop("未偵測到可用的 WDA Runner，已自動停用手勢循環（請先安裝 WebDriverAgentRunner）")
             if err:
                 self._log(f"❌ WDA 指令失敗: {err}", color="red")
             return None
@@ -1106,20 +1144,25 @@ class SimulatorGUI:
         if self._wda_session_id:
             return True
 
-        output = self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25)
-        if not output:
-            self._log("⚠ 無法建立 WDA session，後續將嘗試直接執行手勢", color="orange")
-            return False
+        outputs = [self._run_wda_command(["launch", "com.apple.Preferences"], timeout=25)]
+        xctrunner = self._get_wda_xctrunner()
+        if xctrunner and not self._wda_xctrunner_unavailable:
+            outputs.append(self._run_wda_command(["launch", "com.apple.Preferences", "-xc", xctrunner], timeout=25))
 
-        m = re.search(r'"sessionId"\s*:\s*"([^"]+)"', output)
-        if not m:
-            m = re.search(r'([0-9a-fA-F\-]{10,})', output)
-        if m:
-            self._wda_session_id = m.group(1)
-            self._log(f"✅ WDA session 已建立: {self._wda_session_id}", color="green")
-            return True
+        for output in outputs:
+            if not output:
+                continue
+            m = re.search(r'"sessionId"\s*:\s*"([^"]+)"', output)
+            if not m:
+                m = re.search(r'session\s*id\s*[:=]\s*([0-9a-zA-Z\-]+)', output, re.I)
+            if not m:
+                m = re.search(r'([0-9a-fA-F\-]{10,})', output)
+            if m:
+                self._wda_session_id = m.group(1)
+                self._log(f"✅ WDA session 已建立: {self._wda_session_id}", color="green")
+                return True
 
-        self._log("⚠ WDA launch 成功但未解析到 session id", color="orange")
+        self._log("⚠ 無法建立 WDA session，後續將嘗試直接執行手勢", color="orange")
         return False
 
     def _get_wda_window_size(self):
@@ -1142,6 +1185,14 @@ class SimulatorGUI:
         ]
         if self._wda_session_id:
             args += ["-s", self._wda_session_id]
+            return self._run_wda_command(args, timeout=20) is not None
+
+        # 無 session 時先嘗試指定 xctrunner，再嘗試不指定
+        xctrunner = self._get_wda_xctrunner()
+        if xctrunner and not self._wda_xctrunner_unavailable:
+            with_runner = args + ["-xc", xctrunner]
+            if self._run_wda_command(with_runner, timeout=20) is not None:
+                return True
         return self._run_wda_command(args, timeout=20) is not None
 
     def _update_led(self):
@@ -1447,6 +1498,10 @@ class SimulatorGUI:
         if self.core.running: self._pause_simulation()
 
     def _start_simulation(self):
+        if self.core.running:
+            self._log("⚠ 模擬已在執行中，忽略重複啟動", color="orange")
+            return
+
         if not self.rsd_host.get() or not self.rsd_port.get():
             messagebox.showerror("錯誤", "請先填入 RSD 位址")
             return
@@ -1462,8 +1517,9 @@ class SimulatorGUI:
         self.btn_start.config(state="disabled")
         self.btn_pause.config(state="normal")
         self.btn_stop.config(state="normal")
-        self._start_timer()
-        self.core.start_simulation(points, speed, ivl)
+        started = self.core.start_simulation(points, speed, ivl)
+        if started:
+            self._start_timer()
 
     def _pause_simulation(self):
         if not self.core.running: return
@@ -1615,7 +1671,8 @@ class SimulatorGUI:
             'rsd_host': self.rsd_host.get(), 'rsd_port': self.rsd_port.get(),
             'connection_type': self.connection_type.get(),
             'speed_kmh': self.speed_kmh.get(), 'interval': self.interval.get(),
-            'alert_seconds': self.alert_seconds.get(), 'auto_reconnect': self.auto_reconnect.get()
+            'alert_seconds': self.alert_seconds.get(), 'auto_reconnect': self.auto_reconnect.get(),
+            'wda_xctrunner': self.wda_xctrunner.get()
         }
         try:
             with open(settings_file, 'w', encoding='utf-8') as f: json.dump(data, f, ensure_ascii=False, indent=2)
