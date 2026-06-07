@@ -1,10 +1,10 @@
 {
-  "rsd_host": "fdec:81f5:bbe8::1",
-  "rsd_port": "62428",
+  "rsd_host": "fda9:7808:8891::1",
+  "rsd_port": "49407",
   "connection_type": "wifi",
   "speed_kmh": "18",
   "interval": "3",
   "alert_seconds": "0",
-  "auto_reconnect": true,
+  "auto_reconnect": false,
   "wda_xctrunner": "com.facebook.WebDriverAgentRunner.xctrunner"
 }
