@@ -1,6 +1,6 @@
 {
-  "rsd_host": "fda9:7808:8891::1",
-  "rsd_port": "49407",
+  "rsd_host": "",
+  "rsd_port": "",
   "connection_type": "wifi",
   "speed_kmh": "18",
   "interval": "3",
