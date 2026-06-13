@@ -9,6 +9,7 @@ import webbrowser
 import subprocess
 import sys
 import threading
+from utils import find_pymobiledevice3_python
 
 class SimulatorGUI:
     def __init__(self, root, core):
@@ -49,11 +50,15 @@ class SimulatorGUI:
         # 狀態控制變數
         self.tunneld_proc = None
         self._tunneld_generation = 0
+        self._tunneld_restart_count = 0
         self._browser_proc = None
         self._is_auto_connecting = False
         self._auto_retry_count = 0
         self.saved_routes = []
         
+        # 自動偵測已安裝 pymobiledevice3 的 Python 執行檔
+        self._py3_exe = find_pymobiledevice3_python()
+
         # 日誌檔案初始化
         self.log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "simulator.log")
         try:
@@ -94,6 +99,7 @@ class SimulatorGUI:
         self._log("=" * 60)
         self._log("🎯 iPhone GPS 模擬器 v17.0 - 模組化重構版 (完整版)")
         self._log("=" * 60)
+        self._log(f"🔍 Python for pymobiledevice3: {self._py3_exe}")
         self._log("✅ 修復：阻絕競態條件造成的橡皮筋拉回現象")
         self._log("💡 請按 F12 打開瀏覽器控制台查看詳細日誌")
 
@@ -559,7 +565,7 @@ class SimulatorGUI:
         def _read_output():
             try:
                 proc = subprocess.Popen(
-                    [sys.executable, "-m", "pymobiledevice3", "remote", "tunneld"],
+                    [self._py3_exe, "-m", "pymobiledevice3", "remote", "tunneld"],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=subprocess.CREATE_NO_WINDOW
                 )
                 self.tunneld_proc = proc
@@ -623,7 +629,7 @@ class SimulatorGUI:
         def _resolve_udid():
             try:
                 result = subprocess.run(
-                    [sys.executable, "-m", "pymobiledevice3", "--no-color", "usbmux", "list"],
+                    [self._py3_exe, "-m", "pymobiledevice3", "--no-color", "usbmux", "list"],
                     capture_output=True,
                     text=True,
                     timeout=8,
@@ -646,7 +652,7 @@ class SimulatorGUI:
             return None
 
         def _run_start_tunnel(mode, run_timeout):
-            cmd = [sys.executable, "-m", "pymobiledevice3", "--no-color", "remote", "start-tunnel", "--script-mode", "-t", mode]
+            cmd = [self._py3_exe, "-m", "pymobiledevice3", "--no-color", "remote", "start-tunnel", "--script-mode", "-t", mode]
             if target_udid:
                 cmd += ["--udid", target_udid]
             result = subprocess.run(
@@ -666,7 +672,7 @@ class SimulatorGUI:
             return output, output_lower
 
         def _run_lockdown_start_tunnel(run_timeout):
-            cmd = [sys.executable, "-m", "pymobiledevice3", "--no-color", "lockdown", "start-tunnel", "--script-mode"]
+            cmd = [self._py3_exe, "-m", "pymobiledevice3", "--no-color", "lockdown", "start-tunnel", "--script-mode"]
             if target_udid:
                 cmd += ["--udid", target_udid]
             result = subprocess.run(
@@ -797,7 +803,7 @@ class SimulatorGUI:
         self.lbl_mount.config(text="執行中...", foreground="orange")
         def _run():
             try:
-                result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "mounter", "auto-mount"], capture_output=True, text=True, timeout=60, creationflags=subprocess.CREATE_NO_WINDOW)
+                result = subprocess.run([self._py3_exe, "-m", "pymobiledevice3", "mounter", "auto-mount"], capture_output=True, text=True, timeout=60, creationflags=subprocess.CREATE_NO_WINDOW)
                 output = (result.stdout + result.stderr).strip()
                 output_lower = output.lower()
                 # 記錄實際輸出以便除錯
@@ -836,7 +842,7 @@ class SimulatorGUI:
         self.root.after(0, lambda: self.lbl_mount.config(text="卸載中...", foreground="orange"))
         def _run():
             try:
-                result = subprocess.run([sys.executable, "-m", "pymobiledevice3", "mounter", "unmount"], capture_output=True, text=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW)
+                result = subprocess.run([self._py3_exe, "-m", "pymobiledevice3", "mounter", "unmount"], capture_output=True, text=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW)
                 output = result.stdout + result.stderr
                 if result.returncode == 0 or "unmounted" in output.lower() or "not mounted" in output.lower():
                     self.root.after(0, lambda: self.lbl_mount.config(text="✅ 已卸載", foreground="green"))
@@ -1141,7 +1147,7 @@ class SimulatorGUI:
         return []
 
     def _run_wda_command(self, args, timeout=20):
-        cmd = [sys.executable, "-m", "pymobiledevice3", "developer", "wda"] + args + self._build_wda_device_args()
+        cmd = [self._py3_exe, "-m", "pymobiledevice3", "developer", "wda"] + args + self._build_wda_device_args()
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, creationflags=flags)
