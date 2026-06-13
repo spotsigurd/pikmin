@@ -548,10 +548,33 @@ class SimulatorCore:
                     self.gui.root.after(0, lambda: self.gui.progress.config(value=0))
 
     async def _refresh_rsd_async(self, reason):
-        # 由於涉及隧道邏輯，這部分若長度不足需依賴 gui 內的 _refresh_rsd_async 實作
-        # 在完整版中應實作 PyMobileDevice3 的重連策略
+        """Refresh RSD info. Priority: registry (WiFi) → GUI (USB)."""
         self.log(f"RSD refresh: {reason}", color="orange")
 
+        # ── WiFi mode: get RSD from in-process tunnel registry ──
+        if (self.gui and
+                hasattr(self.gui, '_tunnel_registry') and
+                self.gui.connection_type.get().strip().lower() == "wifi"):
+            info = self.gui._tunnel_registry.get_info()
+            if info:
+                host, port = info["rsd_address"], info["rsd_port"]
+                self.log(f"RSD (WiFi registry): {host}:{port}", color="green")
+                return host, int(port)
+            self.log("⚠ WiFi registry RSD not ready; triggering re-scan", color="orange")
+            # Trigger a re-scan / restart on the GUI thread
+            self.gui.root.after(0, lambda: self.gui._start_tunneld_wifi(force_restart=True))
+            # Wait for registry to populate
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                info = self.gui._tunnel_registry.get_info()
+                if info:
+                    host, port = info["rsd_address"], info["rsd_port"]
+                    self.log(f"RSD (WiFi registry): {host}:{port}", color="green")
+                    return host, int(port)
+                time.sleep(1)
+            raise RuntimeError("WiFi tunnel registry failed to provide RSD")
+
+        # ── USB / legacy: read from GUI vars ──
         def _run_on_gui_thread(callback, timeout=5):
             if not self.gui:
                 raise RuntimeError("GUI is not available")
@@ -590,7 +613,6 @@ class SimulatorCore:
                 raise RuntimeError("RSD refresh already in progress")
 
             try:
-
                 # 若 GUI 正在自動連線，避免同時重啟 tunneld 造成互相打架
                 if getattr(self.gui, '_is_auto_connecting', False):
                     deadline_wait = time.time() + 20

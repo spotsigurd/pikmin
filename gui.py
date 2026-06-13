@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 from utils import find_pymobiledevice3_python
+from wifi_tunnel import TunnelRegistry, discover_remotepairing_devices, wifi_repair
 
 class SimulatorGUI:
     def __init__(self, root, core):
@@ -59,6 +60,20 @@ class SimulatorGUI:
         # 自動偵測已安裝 pymobiledevice3 的 Python 執行檔
         self._py3_exe = find_pymobiledevice3_python()
 
+        # ── In-process WiFi tunnel registry (Python 3.13 native TLS-PSK) ──
+        self._tunnel_registry = TunnelRegistry(log_callback=self._log)
+        self._tunnel_registry.start()
+        self._tunnel_registry.start_keepalive_sync()
+        self._log("✅ WiFi tunnel registry 已啟動 (in-process, Python 3.13 原生 PSK)", color="green")
+
+        # ── WiFi manual mode: device discovery / selection ──
+        self._wifi_devices: list[dict] = []           # [{udid, hostname, port, name, method}, ...]
+        self._wifi_selected_index = tk.IntVar(value=-1)
+        self._wifi_discovering = False
+        self._wifi_connecting = False
+        self._wifi_repairing = False
+        self._wifi_device_var = tk.StringVar(value="")
+
         # 日誌檔案初始化
         self.log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "simulator.log")
         try:
@@ -85,6 +100,12 @@ class SimulatorGUI:
         self.end_lat.trace_add('write', self._on_coord_change)
         self.end_lng.trace_add('write', self._on_coord_change)
         self.wda_xctrunner.trace_add('write', self._on_wda_xctrunner_change)
+
+        # ── USB 插入偵測：WiFi 模式下偵測到 USB 裝置時自動切回 USB ──
+        self._usb_watcher_stop = threading.Event()
+        self._usb_watcher_thread = threading.Thread(
+            target=self._usb_watcher_loop, daemon=True)
+        self._usb_watcher_thread.start()
 
         self.root.after(2000, self._open_map_auto)
         self.root.after(500, self._auto_connect)
@@ -254,7 +275,8 @@ class SimulatorGUI:
         
         row1 = ttk.Frame(f_auto)
         row1.pack(fill='x', pady=(0, 5))
-        ttk.Button(row1, text="⚡ 一鍵自動連線 (Tunneld ➜ Mount ➜ RSD)", command=self._auto_connect).pack(side='left', padx=5)
+        self.btn_auto_connect = ttk.Button(row1, text="⚡ 一鍵自動連線 (Tunneld ➜ Mount ➜ RSD)", command=self._auto_connect)
+        self.btn_auto_connect.pack(side='left', padx=5)
         
         self.led_canvas = tk.Canvas(row1, width=12, height=12, bg="#FFF0F5", highlightthickness=0)
         self.led_canvas.pack(side='left', padx=(5, 2))
@@ -286,6 +308,28 @@ class SimulatorGUI:
         row3.pack(fill='x', pady=(4, 0))
         ttk.Label(row3, text="WDA XCTRunner:").pack(side='left', padx=(5, 2))
         ttk.Entry(row3, textvariable=self.wda_xctrunner, width=46).pack(side='left', padx=2)
+
+        # ── WiFi 手動操作面板（僅 WiFi 模式顯示）──
+        self._wifi_manual_frame = ttk.LabelFrame(f_auto, text="📡 WiFi 手動操作", padding=6)
+
+        wifi_btn_row = ttk.Frame(self._wifi_manual_frame)
+        wifi_btn_row.pack(fill='x', pady=(0, 5))
+        self._btn_wifi_repair = ttk.Button(wifi_btn_row, text="↻ 重新配對", command=self._wifi_repair_click)
+        self._btn_wifi_repair.pack(side='left', padx=3)
+        self._btn_wifi_discover = ttk.Button(wifi_btn_row, text="🔍 自動偵測", command=self._wifi_discover_click)
+        self._btn_wifi_discover.pack(side='left', padx=3)
+        self._btn_wifi_start = ttk.Button(wifi_btn_row, text="🚀 Start WiFi Tunnel", command=self._wifi_start_tunnel_click)
+        self._btn_wifi_start.pack(side='left', padx=3)
+
+        wifi_dev_row = ttk.Frame(self._wifi_manual_frame)
+        wifi_dev_row.pack(fill='x')
+        ttk.Label(wifi_dev_row, text="裝置:").pack(side='left', padx=(0, 2))
+        self._wifi_device_combo = ttk.Combobox(wifi_dev_row, textvariable=self._wifi_device_var, width=45, state="readonly")
+        self._wifi_device_combo.pack(side='left', fill='x', expand=True, padx=(0, 5))
+        self._wifi_device_combo.bind("<<ComboboxSelected>>", self._on_wifi_device_selected)
+
+        self._lbl_wifi_status = ttk.Label(self._wifi_manual_frame, text="", foreground="#4682B4")
+        self._lbl_wifi_status.pack(fill='x', pady=(3, 0))
 
         # --- 區塊 2：設定路徑與速度 ---
         f4 = ttk.LabelFrame(main_frame, text="2. 設定路徑與速度", padding=6)
@@ -402,6 +446,11 @@ class SimulatorGUI:
         self._load_bookmarks()
         self._load_routes()
 
+        # ── 連線模式切換監聽 ──
+        self.connection_type.trace_add('write', self._on_connection_type_change)
+        # 初始觸發一次以設定正確的 UI 狀態
+        self._on_connection_type_change()
+
     # ==========================================
     # 地圖視窗管理
     # ==========================================
@@ -481,7 +530,17 @@ class SimulatorGUI:
     def _auto_connect(self, force_restart=True):
         self._is_auto_connecting = True
         self._clear_rsd()
-        self._log("⚡ 開始自動連線流程 (等待 tunneld 就緒...)", color="blue")
+
+        # ── 若目前停留在 WiFi mode 則強制切回 USB 並停止 in-process tunnels ──
+        ct = self.connection_type.get().strip().lower()
+        if ct == "wifi":
+            self._log("ℹ 切換回 USB 模式，停止 WiFi in-process tunnels...", color="blue")
+            if hasattr(self, '_tunnel_registry') and self._tunnel_registry:
+                self._tunnel_registry.stop_all_sync()
+            self.connection_type.set("USB")
+            self._on_connection_type_change()
+
+        self._log("⚡ 開始自動連線流程 (USB, 等待 tunneld 就緒...)", color="blue")
         self._start_tunneld(force_restart=force_restart)
         self._wait_for_tunneld_ready()
 
@@ -502,11 +561,6 @@ class SimulatorGUI:
             self.root.after(500, lambda: self._wait_for_tunneld_ready(wait_time + 500))
 
     def _auto_mount(self):
-        connection_type = self.connection_type.get().strip().lower()
-        if connection_type == "wifi":
-            self._log("ℹ WiFi 模式略過 DDI 掛載，直接偵測 RSD", color="blue")
-            self._detect_rsd()
-            return
         self._run_mount(on_complete=self._detect_rsd)
         
     def _handle_auto_connect_retry(self):
@@ -551,11 +605,12 @@ class SimulatorGUI:
             self._log(f"⚠ 清除舊進程: {e}")
 
     def _start_tunneld(self, force_restart=False):
+        # ── 一律使用 subprocess tunneld（USB）；WiFi tunnel 由手動面板另行建立 ──
         if force_restart:
             self._stop_tunneld_process()
         if self.tunneld_proc and self.tunneld_proc.poll() is None:
             self._log("⚠ tunneld 已在執行")
-            return 
+            return
         self._log("🚀 啟動 tunneld...", color="blue")
         self.lbl_tunneld.config(text="啟動中...", foreground="orange")
         self._kill_old_tunneld()
@@ -582,6 +637,11 @@ class SimulatorGUI:
                     # 跳過斷線通知，避免把舊的 RSD 地址誤判為有效連線
                     if 'disconnect' in line_lower:
                         continue
+                    # 略過 WiFi tunnel 的 RSD（避免覆蓋 USB tunnel RSD）
+                    if 'start-tunnel-task-wifi-' in line_lower:
+                        continue
+                    if 'wifi' in line_lower and '--rsd' in line_lower:
+                        continue
                     m = re.search(r'\b((?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4})\s+(\d{4,5})\b', line)
                     if not m:
                         m2h = re.search(r'address[:\s]+([\da-fA-F:]+)', line)
@@ -604,6 +664,273 @@ class SimulatorGUI:
                 self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
 
         threading.Thread(target=_read_output, daemon=True).start()
+
+    def _start_tunneld_wifi(self, force_restart=False):
+        """WiFi mode: use in-process TunnelRegistry instead of subprocess tunneld.
+
+        Discovers RemotePairing devices via mDNS, then starts an in-process
+        tunnel through the registry. The watchdog auto-restarts on death.
+        """
+        if self._tunnel_registry.is_any_tunnel_running() and not force_restart:
+            info = self._tunnel_registry.get_info()
+            if info:
+                self._set_rsd(info["rsd_address"], str(info["rsd_port"]))
+                self._log("⚠ WiFi tunnel 已在執行（registry）")
+                return
+
+        self._log("🔍 WiFi 模式：透過 mDNS 搜尋 RemotePairing 裝置...", color="blue")
+        self.lbl_tunneld.config(text="搜尋中...", foreground="orange")
+
+        def _run_wifi_setup():
+            try:
+                import asyncio as aio
+                loop = aio.new_event_loop()
+                aio.set_event_loop(loop)
+                devices = loop.run_until_complete(discover_remotepairing_devices())
+                loop.close()
+
+                if not devices:
+                    self._log("⚠ mDNS 未發現 RemotePairing 裝置（請確認 iPhone 已解鎖且在同一 WiFi）", color="orange")
+                    self.root.after(0, lambda: self.lbl_tunneld.config(text="未發現裝置", foreground="orange"))
+                    if getattr(self, '_is_auto_connecting', False):
+                        self.root.after(0, self._handle_auto_connect_retry)
+                    return
+
+                device = devices[0]
+                udid = device.get("udid", "")
+                ip = device.get("hostname", "")
+                port = device.get("port", 0)
+                name = device.get("name", "")
+
+                self._log(f"  ✅ 發現裝置: {name} ({ip}:{port}, udid={udid[:8]}...)", color="green")
+
+                self.root.after(0, lambda: self.lbl_tunneld.config(text="建立隧道...", foreground="orange"))
+                self._log(f"🚀 建立 in-process WiFi tunnel → {ip}:{port}...", color="blue")
+
+                # Start tunnel through registry
+                info = self._tunnel_registry.start_tunnel_sync(udid, ip, port, timeout=25.0)
+
+                # Start watchdog for auto-restart on tunnel death
+                self._tunnel_registry.start_watchdog_sync(udid)
+
+                self._set_rsd(info["rsd_address"], str(info["rsd_port"]))
+                self.root.after(0, lambda: self.lbl_tunneld.config(text="✅ WiFi 隧道", foreground="green"))
+                self._log(
+                    f"✅ WiFi tunnel 已建立: {info['rsd_address']}:{info['rsd_port']} "
+                    f"(watchdog 監控中)",
+                    color="green"
+                )
+
+                if getattr(self, '_is_auto_connecting', False):
+                    self.root.after(0, self._finalize_auto_connect)
+
+            except Exception as e:
+                self._log(f"❌ WiFi tunnel 啟動失敗: {e}", color="red")
+                self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
+                if getattr(self, '_is_auto_connecting', False):
+                    self.root.after(0, self._handle_auto_connect_retry)
+
+        threading.Thread(target=_run_wifi_setup, daemon=True).start()
+
+    # ==========================================
+    # WiFi 手動操作：重新配對 / 自動偵測 / Start Tunnel
+    # ==========================================
+    def _usb_watcher_loop(self):
+        """Background thread: detect USB insertion and auto-switch WiFi→USB."""
+        from pymobiledevice3.usbmux import list_devices as mux_list_devices
+        import asyncio as aio
+        was_usb_present = False
+        while not self._usb_watcher_stop.is_set():
+            try:
+                loop = aio.new_event_loop()
+                aio.set_event_loop(loop)
+                devices = loop.run_until_complete(mux_list_devices())
+                loop.close()
+                has_usb = any(getattr(d, "connection_type", "USB") == "USB" for d in devices)
+            except Exception:
+                has_usb = False
+
+            if has_usb and not was_usb_present:
+                # USB just plugged in — if WiFi mode, switch to USB
+                ct = self.connection_type.get().strip().lower()
+                if ct == "wifi":
+                    self._log("🔌 偵測到 USB 插入，自動切換為 USB 模式並停止 WiFi tunnels...", color="blue")
+                    if hasattr(self, '_tunnel_registry') and self._tunnel_registry:
+                        self._tunnel_registry.stop_all_sync()
+                    self.connection_type.set("USB")
+                    self._on_connection_type_change()
+                    self._clear_rsd()
+                    # Trigger auto-connect if not already in progress
+                    if not getattr(self, '_is_auto_connecting', False):
+                        self.root.after(500, lambda: self._auto_connect(force_restart=True))
+            was_usb_present = has_usb
+            self._usb_watcher_stop.wait(2.0)
+
+    def _on_connection_type_change(self, *args):
+        """當 connection_type 切換時，顯示/隱藏 WiFi 手動操作面板。"""
+        ct = self.connection_type.get().strip().lower()
+        if ct == "wifi":
+            self._wifi_manual_frame.pack(fill='x', pady=(6, 0))
+            self._log("ℹ WiFi 模式：USB 自動連線完成後，請操作下方 WiFi 面板（重新配對 → 自動偵測 → 選裝置 → Start Tunnel）", color="blue")
+        else:
+            self._wifi_manual_frame.pack_forget()
+            self._log("ℹ USB 模式：使用自動連線", color="blue")
+
+    def _wifi_repair_click(self):
+        """重新配對：透過 USB lockdown autopair 重建 RemotePairing pair record。"""
+        if self._wifi_repairing:
+            self._log("⚠ 重新配對已在進行中", color="orange")
+            return
+        self._wifi_repairing = True
+        self._btn_wifi_repair.config(state="disabled", text="⟳ 配對中...")
+        self._lbl_wifi_status.config(text="正在重新配對，請查看 iPhone 是否跳出信任對話框...")
+        self._log("↻ 開始重新配對 (wifi_repair)，請確認 iPhone 已用 USB 連接...", color="blue")
+
+        def _run():
+            try:
+                import asyncio as aio
+                loop = aio.new_event_loop()
+                aio.set_event_loop(loop)
+                result = loop.run_until_complete(wifi_repair())
+                loop.close()
+
+                status = result.get("status", "")
+                if status == "paired":
+                    name = result.get("name", "iPhone")
+                    udid = result.get("udid", "")
+                    ios_ver = result.get("ios_version", "")
+                    extra = f" (iOS {ios_ver})" if ios_ver else ""
+                    self._log(f"✅ 重新配對成功: {name}{extra} (udid={udid[:8]}...)", color="green")
+                    self.root.after(0, lambda: self._lbl_wifi_status.config(
+                        text=f"✅ 配對成功: {name}{extra}，現在可以進行「自動偵測」"))
+                else:
+                    self._log(f"⚠ 重新配對返回 status={status}", color="orange")
+                    self.root.after(0, lambda: self._lbl_wifi_status.config(text=f"⚠ 配對狀態: {status}"))
+            except Exception as e:
+                self._log(f"❌ 重新配對失敗: {e}", color="red")
+                self.root.after(0, lambda: self._lbl_wifi_status.config(text=f"❌ 配對失敗: {e}"))
+            finally:
+                self._wifi_repairing = False
+                self.root.after(0, lambda: self._btn_wifi_repair.config(state="normal", text="↻ 重新配對"))
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _wifi_discover_click(self):
+        """自動偵測：透過 mDNS 掃描 WiFi 網路中的 RemotePairing 裝置。"""
+        if self._wifi_discovering:
+            self._log("⚠ 自動偵測已在進行中", color="orange")
+            return
+        self._wifi_discovering = True
+        self._btn_wifi_discover.config(state="disabled", text="🔍 偵測中...")
+        self._lbl_wifi_status.config(text="正在掃描 WiFi 網路中的 RemotePairing 裝置...")
+        self._log("🔍 開始 WiFi 自動偵測 (mDNS + port scan)...", color="blue")
+
+        def _run():
+            try:
+                import asyncio as aio
+                loop = aio.new_event_loop()
+                aio.set_event_loop(loop)
+                devices = loop.run_until_complete(discover_remotepairing_devices())
+                loop.close()
+
+                self._wifi_devices = devices
+
+                if not devices:
+                    self._log("⚠ 未發現 RemotePairing 裝置（請確認 iPhone 已解鎖且在同一 WiFi，或先進行重新配對）", color="orange")
+                    self.root.after(0, lambda: self._lbl_wifi_status.config(
+                        text="⚠ 未發現裝置，請先進行「重新配對」後再試"))
+                    self.root.after(0, lambda: self._wifi_device_combo.config(values=[]))
+                    self.root.after(0, lambda: self._wifi_device_var.set(""))
+                else:
+                    self._log(f"✅ 發現 {len(devices)} 個裝置:", color="green")
+                    combo_values = []
+                    for i, d in enumerate(devices):
+                        label = f"{d.get('name', 'iPhone')} @ {d.get('hostname', '?')}:{d.get('port', '?')} [{d.get('method', '?')}]"
+                        combo_values.append(label)
+                        self._log(f"  [{i+1}] {label}")
+
+                    def _update_ui():
+                        self._wifi_device_combo.config(values=combo_values)
+                        if combo_values:
+                            self._wifi_device_combo.current(0)
+                            self._wifi_selected_index.set(0)
+                        self._lbl_wifi_status.config(
+                            text=f"✅ 發現 {len(devices)} 個裝置，請選擇後按「Start WiFi Tunnel」")
+                    self.root.after(0, _update_ui)
+            except Exception as e:
+                self._log(f"❌ 自動偵測失敗: {e}", color="red")
+                self.root.after(0, lambda: self._lbl_wifi_status.config(text=f"❌ 偵測失敗: {e}"))
+            finally:
+                self._wifi_discovering = False
+                self.root.after(0, lambda: self._btn_wifi_discover.config(state="normal", text="🔍 自動偵測"))
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _on_wifi_device_selected(self, event=None):
+        """當使用者在裝置下拉清單中選擇一個裝置時更新 selected_index。"""
+        idx = self._wifi_device_combo.current()
+        if idx >= 0:
+            self._wifi_selected_index.set(idx)
+
+    def _wifi_start_tunnel_click(self):
+        """使用選定的裝置啟動 in-process WiFi tunnel（透過 TunnelRegistry）。"""
+        idx = self._wifi_selected_index.get()
+        if idx < 0 or idx >= len(self._wifi_devices):
+            self._log("⚠ 請先選擇一個裝置", color="orange")
+            return
+        if self._wifi_connecting:
+            self._log("⚠ WiFi Tunnel 連線已在進行中", color="orange")
+            return
+
+        device = self._wifi_devices[idx]
+        udid = device.get("udid", "")
+        ip = device.get("hostname", "")
+        port = device.get("port", 0)
+        name = device.get("name", "iPhone")
+
+        if not udid:
+            self._log("⚠ 裝置 UDID 未知，無法啟動 tunnel（請確認 pair record 存在）", color="orange")
+            return
+
+        self._wifi_connecting = True
+        self._btn_wifi_start.config(state="disabled", text="🚀 啟動中...")
+        self._lbl_wifi_status.config(text=f"正在建立 WiFi Tunnel → {name} ({ip}:{port})...")
+        self.lbl_tunneld.config(text="建立中...", foreground="orange")
+        self._log(f"🚀 啟動 WiFi Tunnel: {name} ({ip}:{port}, udid={udid[:8]}...)", color="blue")
+
+        def _run():
+            try:
+                # Multi-UDID candidate iteration: tries each pair record
+                # against the same (ip, port).  Pair-verify fails fast on
+                # a wrong identifier (~200ms); the first matching record wins.
+                info = self._tunnel_registry.start_tunnel_sync(udid, ip, port, timeout=25.0)
+                winning_udid = info.get("udid", udid)
+                self._tunnel_registry.start_watchdog_sync(winning_udid)
+
+                self._set_rsd(info["rsd_address"], str(info["rsd_port"]))
+                self.root.after(0, lambda: self.lbl_tunneld.config(text="✅ WiFi 隧道", foreground="green"))
+                self._log(
+                    f"✅ WiFi tunnel 已建立 (udid={winning_udid[:8]}...): "
+                    f"{info['rsd_address']}:{info['rsd_port']} (watchdog 監控中)",
+                    color="green"
+                )
+                self.root.after(0, lambda: self._lbl_wifi_status.config(
+                    text=f"✅ 已連線: {name} ({ip}:{port}) → RSD {info['rsd_address']}:{info['rsd_port']}"))
+                self.root.after(0, lambda: self._btn_wifi_start.config(state="normal", text="🚀 Start WiFi Tunnel"))
+                self._wifi_connecting = False
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                self._log(f"❌ WiFi Tunnel 啟動失敗 [{type(e).__name__}]: {e}", color="red")
+                if str(e):
+                    self._log(f"   錯誤訊息: {e}", color="red")
+                self._log(f"   完整追蹤:\n{tb.rstrip()}", color="red")
+                self.root.after(0, lambda: self.lbl_tunneld.config(text="❌ 失敗", foreground="red"))
+                self.root.after(0, lambda: self._lbl_wifi_status.config(text=f"❌ 啟動失敗 [{type(e).__name__}]: {e}"))
+                self.root.after(0, lambda: self._btn_wifi_start.config(state="normal", text="🚀 Start WiFi Tunnel"))
+                self._wifi_connecting = False
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def _set_rsd(self, host, port, generation=None):
         if generation is not None and generation != self._tunneld_generation:
@@ -775,6 +1102,25 @@ class SimulatorGUI:
             if getattr(self, '_is_auto_connecting', False):
                 self._finalize_auto_connect()
             return
+
+        connection_type = self.connection_type.get().strip().lower()
+
+        if connection_type == "wifi":
+            # RSD should already be set by _start_tunneld_wifi; if not,
+            # poll the registry one more time
+            info = self._tunnel_registry.get_info()
+            if info:
+                self._set_rsd(info["rsd_address"], str(info["rsd_port"]))
+                self._log(f"ℹ WiFi RSD (registry): {info['rsd_address']}:{info['rsd_port']}", color="blue")
+                self.btn_start.config(state="normal")
+                if getattr(self, '_is_auto_connecting', False):
+                    self._finalize_auto_connect()
+            else:
+                self._log("⚠ WiFi tunnel registry 中無 RSD，請先啟動 tunnel", color="orange")
+                if getattr(self, '_is_auto_connecting', False):
+                    self._handle_auto_connect_retry()
+            return
+
         if not self.tunneld_proc or self.tunneld_proc.poll() is not None:
             self._log("⚠ 請先啟動 tunneld", color="orange")
             if getattr(self, '_is_auto_connecting', False): self._handle_auto_connect_retry()
@@ -782,13 +1128,6 @@ class SimulatorGUI:
         self._log("🔍 偵測 RSD...", color="blue")
         def _run():
             try:
-                # 檢查當前選定的連接方式
-                connection_type = self.connection_type.get().strip().lower()
-                if connection_type == "wifi":
-                    # WiFi 模式需要額外的等待讓 tunneld 發現設備
-                    self._log(f"⏳ WiFi 模式：等待 20 秒讓 tunneld 完整掃描...", color="orange")
-                    time.sleep(20)
-                
                 self._detect_rsd_sync(15)
                 if getattr(self, '_is_auto_connecting', False):
                     self.root.after(0, self._finalize_auto_connect)
@@ -855,6 +1194,18 @@ class SimulatorGUI:
         else: threading.Thread(target=_run, daemon=True).start()
 
     def _stop_tunneld_process(self):
+        connection_type = self.connection_type.get().strip().lower()
+
+        if connection_type == "wifi":
+            self._log("🔪 終止 WiFi tunnel (registry)...", color="red")
+            udid = self._tunnel_registry.get_first_udid()
+            if udid:
+                self._tunnel_registry.stop_tunnel_sync(udid)
+            self._clear_rsd()
+            self.root.after(0, lambda: self.lbl_tunneld.config(text="已停止", foreground="#555555"))
+            self.core._conn_status = "disconnected"
+            return
+
         self._tunneld_generation += 1
         if self.tunneld_proc and self.tunneld_proc.poll() is None:
             self._log("🔪 終止 tunneld 進程...", color="red")
@@ -1751,5 +2102,12 @@ class SimulatorGUI:
         # 卸載與終止
         if hasattr(self, '_unmount_ddi'): self._unmount_ddi(sync=True)
         if hasattr(self, '_stop_tunneld_process'): self._stop_tunneld_process()
-            
+        if hasattr(self, '_tunnel_registry'):
+            self._log("🛑 停止 WiFi tunnel registry...", color="orange")
+            self._tunnel_registry.stop()
+
+        # 停止 USB 偵測背景執行緒
+        if hasattr(self, '_usb_watcher_stop'):
+            self._usb_watcher_stop.set()
+
         self.root.destroy()

@@ -1,7 +1,7 @@
 {
-  "rsd_host": "fd27:2808:e1be::1",
-  "rsd_port": "49415",
-  "connection_type": "wifi",
+  "rsd_host": "fd32:a862:8f69::1",
+  "rsd_port": "49853",
+  "connection_type": "USB",
   "speed_kmh": "18",
   "interval": "3",
   "alert_seconds": "0",
